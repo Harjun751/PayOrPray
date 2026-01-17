@@ -30,6 +30,7 @@ async function verifyJWT(req, res, next) {
 
         // Attach user info to request object
         req.user = data.user;   // { id, email, role, ... }
+        console.log(data.user);
 
         next();
     } catch (e) {
