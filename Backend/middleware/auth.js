@@ -1,6 +1,8 @@
 
 // middleware/auth.js
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv/config');
+
 
 // Server-side Supabase client (never expose service_role in frontend)
 const supabase = createClient(
@@ -8,7 +10,7 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
-export async function verifyJWT(req, res, next) {
+async function verifyJWT(req, res, next) {
     try {
         const authHeader = req.headers.authorization || "";
         const token = authHeader.startsWith("Bearer ")
@@ -34,3 +36,4 @@ export async function verifyJWT(req, res, next) {
         return res.status(500).json({ error: "Auth verification failed" });
     }
 }
+module.exports = verifyJWT;

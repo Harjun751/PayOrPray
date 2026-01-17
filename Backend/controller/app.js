@@ -4,11 +4,13 @@ var app = express();
 app.use(express.json()); // so POST bodies work
 
 // Auth Middleware
-import { verifyJWT } from "../middleware/auth.js";
+const verifyJWT = require("../middleware/auth.js");
+var cors = require('cors')
 
 // QR
 var qr = require('../model/paynow.js')
 const supabase = require('../database.js');
+
 
 app.use(
     cors({
@@ -58,8 +60,8 @@ app.post("/trips/:tripid/invites", verifyJWT, inviteController.addInvite);
 app.post("/trips/:tripid/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
 app.post("/trips/:tripid/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
-const expensesController = require("./expensesController.js")
-app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+// const expensesController = require("./expensesController.js")
+// app.get("/trips/:tripId/expenses", expensesController.listExpenses)
 
 app.get("/authtest", verifyJWT, async (req, res) => {
     return res.send(req.user.id);
