@@ -2,6 +2,7 @@
 var express = require('express');
 var app = express();
 app.use(express.json()); // so POST bodies work
+app.use(express.urlencoded({ extended: true })); // optional (for form posts)
 
 // QR
 var qr = require('../model/paynow.js')
@@ -47,6 +48,7 @@ app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInv
 
 const expensesController = require("./expensesController.js")
 app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+app.post("/trips/:tripId/expenses", expensesController.addExpense)
 
 module.exports = app;
 

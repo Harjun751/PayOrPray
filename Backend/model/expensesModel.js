@@ -16,4 +16,13 @@ async function getAllExpenses(tripId,userId) {
     return data;
 }
 
-module.exports = {getAllExpenses};
+async function addExpense(tripId,userId,title,currency,amount_cents,notes,category){
+    const {data, error} = await supabase
+    .from("expenses")
+    .insert({payer_id:userId, title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, trips_id:tripId})
+
+    if (error) throw error;
+    return data;
+}
+
+module.exports = {getAllExpenses, addExpense};
