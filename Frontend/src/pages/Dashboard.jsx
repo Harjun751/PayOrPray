@@ -11,7 +11,11 @@ export default function Dashboard({ session, onSignOut }) {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(() => {
+    // Restore selected group from localStorage on mount
+    const saved = localStorage.getItem('selectedGroupId');
+    return saved ? { id: parseInt(saved), name: localStorage.getItem('selectedGroupName') } : null;
+  });
 
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [createTripName, setCreateTripName] = useState('');
@@ -148,7 +152,11 @@ export default function Dashboard({ session, onSignOut }) {
       <GroupDetail
         groupId={selectedGroup.id}
         groupName={selectedGroup.name}
-        onBack={() => setSelectedGroup(null)}
+        onBack={() => {
+          localStorage.removeItem('selectedGroupId');
+          localStorage.removeItem('selectedGroupName');
+          setSelectedGroup(null);
+        }}
       />
     );
   }
@@ -192,7 +200,11 @@ export default function Dashboard({ session, onSignOut }) {
             <GroupsSection
               groups={groups}
               onNewGroup={() => setShowCreateTrip(true)}
-              onOpenGroup={(group) => setSelectedGroup(group)}
+              onOpenGroup={(group) => {
+                localStorage.setItem('selectedGroupId', group.id);
+                localStorage.setItem('selectedGroupName', group.name);
+                setSelectedGroup(group);
+              }}
             />
             
             {groups.length === 0 && !loading && !error && (

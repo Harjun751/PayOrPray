@@ -80,6 +80,20 @@ export const expensesApi = {
     return response.data;
   },
 
+  // Update an expense
+  update: async (tripId, expenseId, expenseData) => {
+    const response = await api.put(`/trips/${tripId}/expenses/${expenseId}`, {
+      title: expenseData.title,
+      currency: expenseData.currency || 'SGD',
+      amount_cents: expenseData.amount_cents,
+      notes: expenseData.notes,
+      category: expenseData.category,
+      payer_id: expenseData.payer_id,
+      expense_splits: expenseData.expense_splits || [], // Include splits if provided
+    });
+    return response.data;
+  },
+
   // Delete an expense
   delete: async (tripId, expenseId) => {
     const response = await api.delete(`/trips/${tripId}/expenses/${expenseId}`);

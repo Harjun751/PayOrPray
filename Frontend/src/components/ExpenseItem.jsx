@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function ExpenseItem({ expense, members }) {
+export default function ExpenseItem({ expense, members, onOpenDetails }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const formatAmount = (amountCents, currency = 'SGD') => {
@@ -59,7 +59,13 @@ export default function ExpenseItem({ expense, members }) {
   return (
     <div
       className="border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-      onClick={() => setIsExpanded(!isExpanded)}
+      onClick={() => {
+        if (onOpenDetails) {
+          onOpenDetails(expense);
+        } else {
+          setIsExpanded(!isExpanded);
+        }
+      }}
     >
       <div className="flex items-center justify-between p-4">
         <div className="flex-1">
