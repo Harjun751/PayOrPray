@@ -8,12 +8,22 @@ function getUserId(req) {
 
 // List trips for authenticated user
 async function listTrips(req, res) {
-  const userId = getUserId(req);
-  if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
-  const page = req.query.page ? Number(req.query.page) : 1;
-  const trips = await tripsModel.getTripsForUser(userId, page);
-  return res.status(200).json(trips);
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const trips = await tripsModel.getTripsForUser(userId, page);
+    return res.status(200).json(trips);
+    } 
+    catch (err) {
+        console.error("listTrips error:", err); 
+        return res.status(500).json({
+        code: "INTERNAL_ERROR",
+        message: err?.message || "Unknown error",
+        details: err,
+        });
+    }             
 }
 
 // Create a new trip for authenticated user

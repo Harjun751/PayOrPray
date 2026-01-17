@@ -7,7 +7,6 @@ app.use(express.json()); // so POST bodies work
 var qr = require('../model/paynow.js')
 const supabase = require('../database.js');
 
-
 // Exisitng routes
 app.get("/test", async (req, res) => {
     const { data, error } = await supabase.from('users').select();
@@ -39,3 +38,4 @@ app.get("/trips", tripsController.listTrips);
 app.post("/trips", tripsController.createTrip);
 
 module.exports = app;
+
