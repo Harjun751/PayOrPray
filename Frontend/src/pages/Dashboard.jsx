@@ -4,7 +4,7 @@ import BalanceCard from "../components/dashboard/BalanceCard";
 import GroupsSection from "../components/dashboard/GroupsSection";
 import QuickActions from "../components/dashboard/QuickActions";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
-import { tripsApi, setUserId } from "../services/api";
+import { tripsApi, setAuthFromSupabase } from "../services/api";
 
 export default function Dashboard({ session, onSignOut }) {
   const [groups, setGroups] = useState([]);
@@ -33,7 +33,7 @@ export default function Dashboard({ session, onSignOut }) {
         }
 
         // Set user ID for API requests
-        setUserId(userId);
+        setAuthFromSupabase();
 
         const trips = await tripsApi.list();
         

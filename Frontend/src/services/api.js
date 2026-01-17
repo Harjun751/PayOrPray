@@ -34,14 +34,6 @@ export const setAuthFromSupabase = async () => {
 };
 
 
-// Set user ID header for authenticated requests
-export const setUserId = (userId) => {
-  if (userId != null) {
-    api.defaults.headers.common["x-user-id"] = String(userId);
-  } else {
-    delete api.defaults.headers.common["x-user-id"];
-  }
-};
 
 // Trips API
 export const tripsApi = {
