@@ -41,6 +41,11 @@ export const tripsApi = {
     const response = await api.get(`/trips?page=${page}`);
     return response.data;
   },
+
+  peopleCount: async (tripId)=>{
+    const response = await api.get(`/trips/${tripId}/people`)
+    return response.data
+  },
   
   create: async (name, description = '') => {
     const response = await api.post('/trips', { 

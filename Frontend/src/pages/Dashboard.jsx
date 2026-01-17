@@ -30,7 +30,6 @@ export default function Dashboard({ session, onSignOut }) {
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        // Get user ID from session metadata or use phone number as fallback
         const userId = session?.user?.user_metadata?.sub || session?.user?.id;
         
         if (!userId) {
@@ -40,42 +39,53 @@ export default function Dashboard({ session, onSignOut }) {
           return;
         }
 
-        // Set user ID for API requests
         await setAuthFromSupabase();
 
         // Fetch trips from backend
         const trips = await tripsApi.list(1);
+        console.log("Fetched trips:", trips);
         
-        // Fetch owed amounts for each trip
-        const tripsWithOwed = await Promise.all(
+        // Fetch people count and owed amounts for each trip
+        const tripsWithData = await Promise.all(
           trips.map(async (trip) => {
+            let people = [];
+            let owed = 0;
+            
+            try {
+              people = await tripsApi.peopleCount(trip.TripID);
+            } catch (err) {
+              console.error(`Error fetching people for trip ${trip.TripID}:`, err);
+            }
+            
             try {
               const owedData = await owedApi.get(trip.TripID);
-              return { ...trip, owed: owedData.owed };
+              owed = owedData.owed;
             } catch (err) {
               console.error(`Error fetching owed for trip ${trip.TripID}:`, err);
-              return { ...trip, owed: 0 };
             }
+            
+            return { ...trip, people, owed };
           })
         );
         
         // Transform backend data to frontend format
-        const transformedGroups = tripsWithOwed.map((trip, index) => {
-          // Generate member initials from People array
-          const memberInitials = trip.People.map(person => {
-            const names = person.Name.split(' ');
+        const transformedGroups = tripsWithData.map((trip, index) => {
+          // Use fetched people data or fallback to trip.People
+          const peopleList = trip.people && trip.people.length > 0 ? trip.people : (trip.People || []);
+          
+          const memberInitials = peopleList.map(person => {
+            const names = (person.name || person.Name).split(' ');
             return names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
           });
 
-          // Color palette for groups
           const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500', 'bg-pink-500', 'bg-indigo-500'];
           
           return {
             id: trip.TripID,
             name: trip.Description,
-            memberCount: trip.People.length,
+            memberCount: peopleList.length,
             members: memberInitials,
-            balance: (trip.owed / 100) || 0, // Convert cents to dollars
+            balance: (trip.owed / 100) || 0,
             accent: colors[index % colors.length],
           };
         });
