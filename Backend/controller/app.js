@@ -9,16 +9,17 @@ const db = pgp(conn);
 // Express
 var express = require('express');
 var app = express();
+app.use(express.json()); // so POST bodies work
+
+// QR
 var qr = require('../model/paynow.js')
 
-module.exports = app;
 
+// Exisitng routes
 app.get("/test", async (req, res) => {
     let dbres = await db.any('SELECT * FROM USERS');
     res.send(dbres);
 })
-
-module.exports = app;
 
 app.get('/generateQR',function(req, res){
 
@@ -33,3 +34,11 @@ app.get('/generateQR',function(req, res){
     res.send(pngBuffer);
     });
 }); 
+
+// TRIP 
+
+const tripsController = require("./tripsController");
+app.get("/trips", tripsController.listTrips);
+app.post("/trips", tripsController.createTrip);
+
+module.exports = app;
