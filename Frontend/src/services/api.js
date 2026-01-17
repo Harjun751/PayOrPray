@@ -33,14 +33,6 @@ export const setAuthFromSupabase = async () => {
   }
 };
 
-// Set bearer token for authenticated requests
-export const setBearerToken = (token) => {
-  if (token) {
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  } else {
-    delete api.defaults.headers.common['Authorization'];
-  }
-};
 
 // Set user ID header for authenticated requests
 export const setUserId = (userId) => {
