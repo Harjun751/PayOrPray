@@ -4,11 +4,10 @@ const tripsModel = require("../model/tripsModel");
 async function listTrips(req, res) {
     try {
         const userId = req.user.id;
-        if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
-    const page = req.query.page ? Number(req.query.page) : 1;
-    const trips = await tripsModel.getTripsForUser(userId, page);
-    return res.status(200).json(trips);
+        const page = req.query.page ? Number(req.query.page) : 1;
+        const trips = await tripsModel.getTripsForUser(userId, page);
+        return res.status(200).json(trips);
     }
     catch (err) {
         console.error("listTrips error:", err);
