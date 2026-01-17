@@ -65,7 +65,7 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
   }));
 }
 
-async function createTrip({ ownerId, description }) {
+async function createTrip({ ownerId, name, description }) {
   const invite_code = genInviteCode();
 
   // 1) create group
@@ -73,9 +73,10 @@ async function createTrip({ ownerId, description }) {
     .from("trips")
     .insert([
       {
-        name: description,
+        name: name,
         owner_id: ownerId,
-        invite_code,
+        description: description,
+        invite_code: invite_code,
       },
     ])
     .select("id, name, owner_id")
@@ -85,8 +86,8 @@ async function createTrip({ ownerId, description }) {
 
   // 2) add owner as member
   const { error: gmErr } = await supabase
-    .from("group_members")
-    .insert([{ group_id: created.id, user_id: ownerId }]);
+    .from("trip_members")
+    .insert([{ trip_id: created.id, user_id: ownerId }]);
 
   if (gmErr) throw gmErr;
 

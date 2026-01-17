@@ -48,7 +48,6 @@ app.get('/generateQR',function(req, res){
 });
 
 // TRIP
-
 const tripsController = require("./tripsController");
 app.get("/trips", verifyJWT, tripsController.listTrips);
 app.post("/trips", verifyJWT, tripsController.createTrip);
@@ -56,9 +55,12 @@ app.post("/trips", verifyJWT, tripsController.createTrip);
 const tripPeopleController = require("./peopleController");
 app.get("/trips/:tripId/people", verifyJWT, tripPeopleController.getPeople)
 
+
 const debtController = require("./debtController")
 app.get("/trips/:tripId/debt", verifyJWT, debtController.getDebt)
 
+
+// INVITES
 const inviteController = require("./inviteController");
 app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
 app.get("/invites", verifyJWT, inviteController.getInvitesForUser);
@@ -66,14 +68,21 @@ app.post("/trips/:tripId/invites", verifyJWT, inviteController.addInvite);
 app.post("/trips/:tripId/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
 app.post("/trips/:tripId/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
+// EXPENSES
 const expensesController = require("./expensesController.js")
-app.get("/trips/:tripId/expenses", verifyJWT, expensesController.listExpenses)
-app.post("/trips/:tripId/expenses", verifyJWT, expensesController.addExpense)
-app.put("/trips/:tripId/expenses/:expenseId", verifyJWT, expensesController.updateExpense)
-app.delete("/trips/:tripId/expenses/:expenseId", verifyJWT, expensesController.deleteExpense)
+app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+app.post("/trips/:tripId/expenses", expensesController.addExpense)
+app.delete("/trips/:tripId/expenses/:expenseId", expensesController.deleteExpense)
 
 const owedController = require("./owedController.js")
 app.get("/trips/:tripId/owed", verifyJWT, owedController.getOwed);
+
+
+// EXPENSESPLITS
+const expenseSplitsController = require("./expensesSplitsController");
+app.get("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.getExpenseSplits);
+app.put("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.putExpenseSplits);
+
 
 module.exports = app;
 

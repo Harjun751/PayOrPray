@@ -41,9 +41,17 @@ export const tripsApi = {
     const response = await api.get(`/trips?page=${page}`);
     return response.data;
   },
+
+  peopleCount: async (tripId)=>{
+    const response = await api.get(`/trips/${tripId}/people`)
+    return response.data
+  },
   
-  create: async (description) => {
-    const response = await api.post('/trips', { Description: description });
+  create: async (name, description = '') => {
+    const response = await api.post('/trips', { 
+      name: name,
+      description: description // Optional field for additional details
+    });
     return response.data;
   },
 };
@@ -72,9 +80,33 @@ export const expensesApi = {
     return response.data;
   },
 
+  // Update an expense
+  update: async (tripId, expenseId, expenseData) => {
+    const response = await api.put(`/trips/${tripId}/expenses/${expenseId}`, {
+      title: expenseData.title,
+      currency: expenseData.currency || 'SGD',
+      amount_cents: expenseData.amount_cents,
+      notes: expenseData.notes,
+      category: expenseData.category,
+      payer_id: expenseData.payer_id,
+      expense_splits: expenseData.expense_splits || [], // Include splits if provided
+    });
+    return response.data;
+  },
+
   // Delete an expense
   delete: async (tripId, expenseId) => {
     const response = await api.delete(`/trips/${tripId}/expenses/${expenseId}`);
+    return response.data;
+  },
+};
+
+// Owed API
+export const owedApi = {
+  // Get owed amount for a user in a specific trip
+  // Returns: { owed: number } - positive if owed to you, negative if you owe
+  get: async (tripId) => {
+    const response = await api.get(`/trips/${tripId}/owed`);
     return response.data;
   },
 };
