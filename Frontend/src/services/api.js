@@ -42,8 +42,11 @@ export const tripsApi = {
     return response.data;
   },
   
-  create: async (description) => {
-    const response = await api.post('/trips', { Description: description });
+  create: async (name, description = '') => {
+    const response = await api.post('/trips', { 
+      name: name,
+      description: description // Optional field for additional details
+    });
     return response.data;
   },
 };

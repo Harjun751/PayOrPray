@@ -21,21 +21,32 @@ async function listTrips(req, res) {
 
 // Create a new trip for authenticated user
 async function createTrip(req, res) {
-    const userId = req.user.id;
-  if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
+    try {
+        const userId = req.user.id;
+        if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
-  const { Description } = req.body || {};
-  if (!Description || !String(Description).trim()) {
-    return res.status(400).json({ code: "BAD_REQUEST", message: "Description is required" });
-  }
+        const { name,description } = req.body || {};
+        console.log("Received name:", name); // Add this
+        if (!name || !String(name).trim()) {
+            return res.status(400).json({ code: "BAD_REQUEST", message: "Name is required" });
+        }
 
-    const trip = await tripsModel.createTrip({
-    ownerId: userId,
-    description: String(Description).trim(),
-  });
+        const trip = await tripsModel.createTrip({
+            ownerId: userId,
+            name: String(name).trim(),
+            description: description
+        });
 
-  res.setHeader("Location", `/trips/${trip.TripID}`);
-  return res.status(201).json(trip);
+        res.setHeader("Location", `/trips/${trip.TripID}`);
+        return res.status(201).json(trip);
+    } catch (err) {
+        console.error("createTrip error:", err); // Add this
+        return res.status(500).json({
+            code: "INTERNAL_ERROR",
+            message: err?.message || "Unknown error",
+            details: err,
+        });
+    }
 }
 
 
