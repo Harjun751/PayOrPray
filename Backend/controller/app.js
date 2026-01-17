@@ -30,12 +30,20 @@ app.get('/generateQR',function(req, res){
     res.setHeader("Content-Length", pngBuffer.length);
     res.send(pngBuffer);
     });
-}); 
+});
 
-// TRIP 
+// TRIP
 
 const tripsController = require("./tripsController");
 app.get("/trips", tripsController.listTrips);
 app.post("/trips", tripsController.createTrip);
+
+const inviteController = require("./inviteController");
+app.get("/trips/:tripId/invites", inviteController.getInvites);
+
+app.get("/invites", inviteController.getInvitesForUser);
+app.post("/trips/:tripid/invites", inviteController.addInvite);
+app.post("/trips/:tripid/invites/:inviteid/accept", inviteController.acceptInvite);
+app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInvite);
 
 module.exports = app;
