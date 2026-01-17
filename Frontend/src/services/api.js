@@ -48,4 +48,9 @@ export const tripsApi = {
   },
 };
 
+export  async function testAPI() {
+    const resp= await api.get('authtest')
+    console.log(resp);
+}
+
 export default api;
