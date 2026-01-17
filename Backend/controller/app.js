@@ -1,24 +1,19 @@
-// Environment variables
-require('dotenv').config();
-
-// DB setup
-const pgp = require('pg-promise')();
-let conn = process.env.DATABASE_CONN_STRING;
-const db = pgp(conn);
-
 // Express
 var express = require('express');
 var app = express();
 var qr = require('../model/paynow.js')
+const supabase = require('../database.js');
 
 module.exports = app;
 
 app.get("/test", async (req, res) => {
-    let dbres = await db.any('SELECT * FROM USERS');
-    res.send(dbres);
+    const { data, error } = await supabase.from('users').select();
+    if (error != null) {
+        res.send(error);
+    } else {
+        res.send(data);
+    }
 })
-
-module.exports = app;
 
 app.get('/generateQR',function(req, res){
 
