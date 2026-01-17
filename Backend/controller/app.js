@@ -53,13 +53,15 @@ const tripsController = require("./tripsController");
 app.get("/trips", verifyJWT, tripsController.listTrips);
 app.post("/trips", verifyJWT, tripsController.createTrip);
 
+const tripPeopleController = require("./peopleController");
+app.get("/trips/:tripId/people", verifyJWT, tripPeopleController.getPeople)
+
 const inviteController = require("./inviteController");
 app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
-
 app.get("/invites", verifyJWT, inviteController.getInvitesForUser);
-app.post("/trips/:tripid/invites", verifyJWT, inviteController.addInvite);
-app.post("/trips/:tripid/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
-app.post("/trips/:tripid/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
+app.post("/trips/:tripId/invites", verifyJWT, inviteController.addInvite);
+app.post("/trips/:tripId/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
+app.post("/trips/:tripId/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
 const expensesController = require("./expensesController.js")
 app.get("/trips/:tripId/expenses", verifyJWT, expensesController.listExpenses)
