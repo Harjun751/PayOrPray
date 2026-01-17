@@ -4,7 +4,7 @@ import BalanceCard from "../components/dashboard/BalanceCard";
 import GroupsSection from "../components/dashboard/GroupsSection";
 import QuickActions from "../components/dashboard/QuickActions";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
-import { tripsApi, setAuthFromSupabase } from "../services/api";
+import { tripsApi, setAuthFromSupabase, testAPI } from "../services/api";
 
 export default function Dashboard({ session, onSignOut }) {
   const [groups, setGroups] = useState([]);
@@ -33,9 +33,10 @@ export default function Dashboard({ session, onSignOut }) {
         }
 
         // Set user ID for API requests
-        setAuthFromSupabase();
+        await setAuthFromSupabase();
 
-        const trips = await tripsApi.list();
+        
+        const test= await testAPI();
         
         // Transform backend data to frontend format
         const transformedGroups = trips.map((trip, index) => {
