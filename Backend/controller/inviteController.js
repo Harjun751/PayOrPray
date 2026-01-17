@@ -20,12 +20,22 @@ async function getInvitesForUser(req, res) {
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
     // check if we need this endpoint - get pending invite for users so they can perform actions
     const { data, error } = await supabase.from('invites')
-        .select()
+        .select(` 
+            *,
+            trips!inner (
+              name
+            )
+            `)
         .eq("user_id", userId)
         .eq("status", "pending");
 
     if (error != null) {
         return res.send(error);
+    }
+
+    for (const item of data) {
+        item.trip_name = item.trips.name; // hoist
+        delete item.trips.name;           // remove original
     }
     return res.send(data);
 }
