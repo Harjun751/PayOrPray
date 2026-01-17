@@ -39,7 +39,7 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
 
         // Fetch expenses using the API
         const expensesData = await expensesApi.list(groupId);
-        setExpenses(expensesData || []);
+        setExpenses((expensesData || []).sort((b, a) => new Date(a.created_at) - new Date(b.created_at)));
 
         // Fetch members directly from Supabase
         const { data: membersData, error: membersError } = await supabase
@@ -130,43 +130,30 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
 
     try {
       await setAuthFromSupabase();
-      
-      // Create expense directly via Supabase to specify custom payer
-      const { data: expenseData, error: expenseError } = await supabase
-        .from('expense')
-        .insert({
-          trip_id: groupId,
-          payer: selectedPayer,
-          title: expenseFormData.title,
-          currency: expenseFormData.currency,
-          amount_cents: parseInt(expenseFormData.amount_cents),
-          notes: expenseFormData.notes,
-          category: expenseFormData.category,
-        })
-        .select()
-        .single();
 
-      if (expenseError) throw expenseError;
-      
-      if (expenseData && expenseData.id) {
-        // Create the splits
-        const splits = calculateSplits();
-        const splitPromises = splits.map(split => 
-          supabase.from('expense_splits').insert({
-            expense_id: expenseData.id,
-            user_id: split.user_id,
-            share_cents: split.share_cents
-          })
-        );
-        
-        await Promise.all(splitPromises);
-        
-        // Add expense_splits to the new expense for display
-        expenseData.expense_splits = splits;
-        
-        setExpenses(prev => [expenseData, ...prev]);
+      // Calculate splits
+      const totalAmount = parseInt(expenseFormData.amount_cents);
+      const perPerson = Math.floor(totalAmount / selectedMembers.length);
+      const remainder = totalAmount % selectedMembers.length;
+      const splits = selectedMembers.map((memberId, index) => ({
+        user_id: memberId,
+        share_cents: perPerson + (index < remainder ? 1 : 0)
+      }));
+
+      // Call backend API to create expense and splits
+      const newExpense = await expensesApi.create(groupId, {
+        ...expenseFormData,
+        payer: selectedPayer,
+        expense_splits: splits,
+      });
+
+      // Add expense_splits to the new expense for display if not already present
+      if (!newExpense.expense_splits) {
+        newExpense.expense_splits = splits;
       }
-      
+
+      setExpenses(prev => [newExpense, ...prev]);
+
       // Reset form
       setExpenseFormData({
         title: '',
