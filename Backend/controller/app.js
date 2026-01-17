@@ -79,6 +79,5 @@ app.get("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.get
 app.put("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.putExpenseSplits);
 
 
-
 module.exports = app;
 
