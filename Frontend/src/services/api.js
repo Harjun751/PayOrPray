@@ -76,6 +76,7 @@ export const expensesApi = {
       amount_cents: expenseData.amount_cents,
       notes: expenseData.notes,
       category: expenseData.category,
+      splits: expenseData.splits,
     });
     return response.data;
   },
