@@ -45,5 +45,8 @@ app.post("/trips/:tripid/invites", inviteController.addInvite);
 app.post("/trips/:tripid/invites/:inviteid/accept", inviteController.acceptInvite);
 app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInvite);
 
+const expensesController = require("./expensesController.js")
+app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+
 module.exports = app;
 

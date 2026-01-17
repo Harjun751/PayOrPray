@@ -45,4 +45,6 @@ async function createTrip(req, res) {
   return res.status(201).json(trip);
 }
 
-module.exports = { listTrips, createTrip };
+
+
+module.exports = { listTrips, createTrip};

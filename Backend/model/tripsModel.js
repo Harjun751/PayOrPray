@@ -99,7 +99,7 @@ async function createTrip({ ownerId, description }) {
   };
 }
 
-module.exports = { getTripsForUser, createTrip };
+module.exports = { getTripsForUser, createTrip};
 
 
 // // Backend/model/tripsModel.js
