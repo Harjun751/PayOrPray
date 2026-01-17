@@ -3,9 +3,22 @@ var express = require('express');
 var app = express();
 app.use(express.json()); // so POST bodies work
 
+// Auth Middleware
+import { verifyJWT } from "../middleware/auth.js";
+
 // QR
 var qr = require('../model/paynow.js')
 const supabase = require('../database.js');
+
+app.use(
+    cors({
+        origin: [
+            "http://localhost:5173",
+            process.env.FRONTEND_ORIGIN
+        ],
+        credentials: true
+    })
+)
 
 // Exisitng routes
 app.get("/test", async (req, res) => {
@@ -38,12 +51,15 @@ app.get("/trips", tripsController.listTrips);
 app.post("/trips", tripsController.createTrip);
 
 const inviteController = require("./inviteController");
-app.get("/trips/:tripId/invites", inviteController.getInvites);
+app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
 
-app.get("/invites", inviteController.getInvitesForUser);
-app.post("/trips/:tripid/invites", inviteController.addInvite);
-app.post("/trips/:tripid/invites/:inviteid/accept", inviteController.acceptInvite);
-app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInvite);
+app.get("/invites", verifyJWT, inviteController.getInvitesForUser);
+app.post("/trips/:tripid/invites", verifyJWT, inviteController.addInvite);
+app.post("/trips/:tripid/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
+app.post("/trips/:tripid/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
+app.get("/authtest", verifyJWT, async (req, res) => {
+    return res.send(req.user.id);
+})
 module.exports = app;
 
