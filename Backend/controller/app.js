@@ -56,6 +56,9 @@ app.post("/trips", verifyJWT, tripsController.createTrip);
 const tripPeopleController = require("./peopleController");
 app.get("/trips/:tripId/people", verifyJWT, tripPeopleController.getPeople)
 
+const debtController = require("./debtController")
+app.get("/trips/:tripId/debt", verifyJWT, debtController.getDebt)
+
 const inviteController = require("./inviteController");
 app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
 app.get("/invites", verifyJWT, inviteController.getInvitesForUser);
