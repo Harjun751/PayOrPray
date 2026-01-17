@@ -49,8 +49,8 @@ app.get('/generateQR',function(req, res){
 // TRIP
 
 const tripsController = require("./tripsController");
-app.get("/trips", tripsController.listTrips);
-app.post("/trips", tripsController.createTrip);
+app.get("/trips", verifyJWT, tripsController.listTrips);
+app.post("/trips", verifyJWT, tripsController.createTrip);
 
 const inviteController = require("./inviteController");
 app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
@@ -60,11 +60,8 @@ app.post("/trips/:tripid/invites", verifyJWT, inviteController.addInvite);
 app.post("/trips/:tripid/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
 app.post("/trips/:tripid/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
-// const expensesController = require("./expensesController.js")
-// app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+const expensesController = require("./expensesController.js")
+app.get("/trips/:tripId/expenses", verifyJWT, expensesController.listExpenses)
 
-app.get("/authtest", verifyJWT, async (req, res) => {
-    return res.send(req.user.id);
-})
 module.exports = app;
 
