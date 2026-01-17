@@ -1,11 +1,10 @@
 const tripsModel = require("../model/expensesModel");
-const getUserId = require('../utils/getAuth.js');
 
 
 //get all expenses of a trip while ensuring user is in that trip
 async function listExpenses(req, res) {
   try {
-    const userId = getUserId(req)
+    const userId = req.user.id;
     tripId = req.params.tripId;           // <-- from URL
     console.log(tripId)
     const expenses = await tripsModel.getAllExpenses(tripId,userId);
@@ -17,7 +16,7 @@ async function listExpenses(req, res) {
 
 async function addExpense(req, res) {
     try {
-        const userId = getUserId(req)
+        const userId = req.user.id;
         tripId = req.params.tripId;           // <-- from URL
         console.log(tripId)
         const title = req.body.title

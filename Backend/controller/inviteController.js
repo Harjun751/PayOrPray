@@ -1,8 +1,7 @@
 const supabase = require('../database.js');
-const getUserId = require('../utils/getAuth.js');
 
 async function getInvites(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
     const { data, error } = await supabase.from('invites')
@@ -17,7 +16,7 @@ async function getInvites(req, res) {
 }
 
 async function getInvitesForUser(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
     // check if we need this endpoint - get pending invite for users so they can perform actions
     const { data, error } = await supabase.from('invites')
@@ -32,7 +31,7 @@ async function getInvitesForUser(req, res) {
 }
 
 async function addInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
     {
@@ -80,7 +79,7 @@ async function addInvite(req, res) {
 }
 
 async function acceptInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     const inviteId = req.params.inviteid;
     const tripId = req.params.tripid;
 
@@ -128,7 +127,7 @@ async function acceptInvite(req, res) {
 }
 
 async function declineInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     const inviteId = req.params.inviteid;
     const tripId = req.params.tripid;
 
