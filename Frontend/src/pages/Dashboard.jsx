@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import TopNav from "../components/dashboard/TopNav";
 import BalanceCard from "../components/dashboard/BalanceCard";
 import GroupsSection from "../components/dashboard/GroupsSection";
@@ -8,15 +8,13 @@ import GroupDetail from "./GroupDetail";
 import { tripsApi, setAuthFromSupabase, testAPI, expensesApi, owedApi, inviteAPI } from "../services/api";
 import InvitePanel from "../components/dashboard/InvitePanel";
 
-export default function Dashboard({ session, onSignOut }) {
+/**
+ * Hook: Encapsulates dashboard data fetching and actions
+ */
+function useDashboard(session) {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(() => {
-    // Restore selected group from localStorage on mount
-    const saved = localStorage.getItem('selectedGroupId');
-    return saved ? { id: parseInt(saved), name: localStorage.getItem('selectedGroupName') } : null;
-  });
   const [invites, setInvites] = useState([]);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [createTripName, setCreateTripName] = useState('');
@@ -24,54 +22,110 @@ export default function Dashboard({ session, onSignOut }) {
   const [createTripLoading, setCreateTripLoading] = useState(false);
   const [createTripError, setCreateTripError] = useState('');
 
-  // Mock numbers - TODO: Calculate from real data
-  const summary = {
-    total: -67.7,
-    owedToYou: 57.8,
-    youOwe: 125.5,
-  };
+  // Helper to extract inviteId and tripId robustly
+  const getInviteIds = useCallback((inv) => {
+    const inviteId = inv?.id ?? inv?.invite_id ?? inv?.InviteID ?? inv?.InviteId;
+    const tripId = inv?.trip_id ?? inv?.TripID ?? inv?.tripId ?? inv?.TripId;
+    return { inviteId, tripId };
+  }, []);
 
-  // Fetch trips from API
+  // Accept an invite: POST /trips/{tripId}/invites/{inviteId}/accept
+  const handleAcceptInvite = useCallback(async (inv) => {
+    const { inviteId, tripId } = getInviteIds(inv);
+    if (!inviteId || !tripId) {
+      console.error("Missing invite or trip id for accept", inv);
+      return;
+    }
+    try {
+      await setAuthFromSupabase();
+      await inviteAPI.accept(tripId, inviteId);
+      setInvites((prev) => prev.filter((i) => {
+        const { inviteId: id } = getInviteIds(i);
+        return id !== inviteId;
+      }));
+    } catch (err) {
+      console.error("Failed to accept invite:", err);
+    }
+  }, [getInviteIds]);
+
+  // Decline an invite: POST /trips/{tripId}/invites/{inviteId}/decline
+  const handleDeclineInvite = useCallback(async (inv) => {
+    const { inviteId, tripId } = getInviteIds(inv);
+    if (!inviteId || !tripId) {
+      console.error("Missing invite or trip id for decline", inv);
+      return;
+    }
+    try {
+      await setAuthFromSupabase();
+      await inviteAPI.decline(tripId, inviteId);
+      setInvites((prev) => prev.filter((i) => {
+        const { inviteId: id } = getInviteIds(i);
+        return id !== inviteId;
+      }));
+    } catch (err) {
+      console.error("Failed to decline invite:", err);
+    }
+  }, [getInviteIds]);
+
+  // Create trip handler
+  const handleCreateTrip = useCallback(async () => {
+    if (!createTripName.trim()) {
+      setCreateTripError('Trip name is required');
+      return;
+    }
+
+    setCreateTripLoading(true);
+    setCreateTripError('');
+
+    try {
+      await setAuthFromSupabase();
+      const newTrip = await tripsApi.create(createTripName, createTripDescription); // Pass description here
+
+      const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500', 'bg-pink-500', 'bg-indigo-500'];
+      const transformedTrip = {
+        id: newTrip.TripID,
+        name: newTrip.Description,
+        memberCount: 1,
+        members: [],
+        balance: 0,
+        accent: colors[groups.length % colors.length],
+      };
+
+      setGroups(prev => [...prev, transformedTrip]);
+      setShowCreateTrip(false);
+      setCreateTripName('');
+      setCreateTripDescription('');
+    } catch (err) {
+      setCreateTripError(err.message || 'Failed to create trip');
+      console.error('Error creating trip:', err);
+    } finally {
+      setCreateTripLoading(false);
+    }
+  }, [createTripName, createTripDescription, groups.length]);
+
+  // Fetch trips + invites
   useEffect(() => {
     const fetchTrips = async () => {
       try {
-        const userId = session?.user?.user_metadata?.sub || session?.user?.id;
-
-        if (!userId) {
-          console.error("No user ID found in session");
-          setError("Authentication error");
-          setLoading(false);
-          return;
-        }
-
-        await setAuthFromSupabase();
-
         // Fetch trips from backend
         const trips = await tripsApi.list(1);
-        console.log("Fetched trips:", trips);
-
-        let invites = await inviteAPI.get();
-        setInvites(invites);
-
 
         // Fetch people count and owed amounts for each trip
         const tripsWithData = await Promise.all(
           trips.map(async (trip) => {
-            let people = [];
-            let owed = 0;
-
-            try {
-              people = await tripsApi.peopleCount(trip.TripID);
-            } catch (err) {
+            // start both requests in parallel, preserve previous error handling/fallbacks
+            const peoplePromise = tripsApi.peopleCount(trip.TripID).catch((err) => {
               console.error(`Error fetching people for trip ${trip.TripID}:`, err);
-            }
+              return [];
+            });
 
-            try {
-              const owedData = await owedApi.get(trip.TripID);
-              owed = owedData.owed;
-            } catch (err) {
+            const owedPromise = owedApi.get(trip.TripID).catch((err) => {
               console.error(`Error fetching owed for trip ${trip.TripID}:`, err);
-            }
+              return { owed: 0 };
+            });
+
+            const [people, owedRes] = await Promise.all([peoplePromise, owedPromise]);
+            const owed = owedRes?.owed ?? 0;
 
             return { ...trip, people, owed };
           })
@@ -110,90 +164,80 @@ export default function Dashboard({ session, onSignOut }) {
     };
 
     if (session) {
-      fetchTrips();
+      const userId = session?.user?.user_metadata?.sub || session?.user?.id;
+
+      if (!userId) {
+        console.error("No user ID found in session");
+        setError("Authentication error");
+        setLoading(false);
+        return;
+      }
+
+      setAuthFromSupabase().then(() => {
+        fetchTrips();
+        (async () => {
+          try {
+            const fetchedInvites = await inviteAPI.list();
+            setInvites(fetchedInvites);
+          } catch (err) {
+            console.error("Error fetching invites:", err);
+          }})();
+      })
     }
   }, [session]);
 
-  // ADD handleCreateTrip FUNCTION HERE ↓
-  const handleCreateTrip = async () => {
-    if (!createTripName.trim()) {
-      setCreateTripError('Trip name is required');
-      return;
-    }
-
-    setCreateTripLoading(true);
-    setCreateTripError('');
-
-    try {
-      await setAuthFromSupabase();
-      const newTrip = await tripsApi.create(createTripName, createTripDescription); // Pass description here
-
-      const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500', 'bg-pink-500', 'bg-indigo-500'];
-      const transformedTrip = {
-        id: newTrip.TripID,
-        name: newTrip.Description,
-        memberCount: 1,
-        members: [],
-        balance: 0,
-        accent: colors[groups.length % colors.length],
-      };
-
-      setGroups(prev => [...prev, transformedTrip]);
-      setShowCreateTrip(false);
-      setCreateTripName('');
-      setCreateTripDescription('');
-    } catch (err) {
-      setCreateTripError(err.message || 'Failed to create trip');
-      console.error('Error creating trip:', err);
-    } finally {
-      setCreateTripLoading(false);
-    }
+  return {
+    groups,
+    loading,
+    error,
+    invites,
+    showCreateTrip,
+    createTripName,
+    setCreateTripName,
+    createTripDescription,
+    setCreateTripDescription,
+    createTripLoading,
+    createTripError,
+    setShowCreateTrip,
+    handleCreateTrip,
+    handleAcceptInvite,
+    handleDeclineInvite,
+    setInvites,
   };
-  // ↑ END handleCreateTrip
+}
 
-  // Helper to extract inviteId and tripId robustly
-  const getInviteIds = (inv) => {
-    const inviteId = inv?.id ?? inv?.invite_id ?? inv?.InviteID ?? inv?.InviteId;
-    const tripId = inv?.trip_id ?? inv?.TripID ?? inv?.tripId ?? inv?.TripId;
-    return { inviteId, tripId };
-  };
+export default function Dashboard({ session, onSignOut }) {
+  // selectedGroup stays in component to control view switching
+  const [selectedGroup, setSelectedGroup] = useState(() => {
+    // Restore selected group from localStorage on mount
+    const saved = localStorage.getItem('selectedGroupId');
+    return saved ? { id: parseInt(saved), name: localStorage.getItem('selectedGroupName') } : null;
+  });
 
-  // Accept an invite: POST /trips/{tripId}/invites/{inviteId}/accept
-  const handleAcceptInvite = async (inv) => {
-    const { inviteId, tripId } = getInviteIds(inv);
-    if (!inviteId || !tripId) {
-      console.error("Missing invite or trip id for accept", inv);
-      return;
-    }
-    try {
-      await setAuthFromSupabase();
-      await inviteAPI.accept(tripId, inviteId);
-      setInvites((prev) => prev.filter((i) => {
-        const { inviteId: id } = getInviteIds(i);
-        return id !== inviteId;
-      }));
-    } catch (err) {
-      console.error("Failed to accept invite:", err);
-    }
-  };
+  // Use new hook to manage dashboard data + actions
+  const {
+    groups,
+    loading,
+    error,
+    invites,
+    showCreateTrip,
+    createTripName,
+    setCreateTripName,
+    createTripDescription,
+    setCreateTripDescription,
+    createTripLoading,
+    createTripError,
+    setShowCreateTrip,
+    handleCreateTrip,
+    handleAcceptInvite,
+    handleDeclineInvite,
+  } = useDashboard(session);
 
-  // Decline an invite: POST /trips/{tripId}/invites/{inviteId}/decline
-  const handleDeclineInvite = async (inv) => {
-    const { inviteId, tripId } = getInviteIds(inv);
-    if (!inviteId || !tripId) {
-      console.error("Missing invite or trip id for decline", inv);
-      return;
-    }
-    try {
-      await setAuthFromSupabase();
-      await inviteAPI.decline(tripId, inviteId);
-      setInvites((prev) => prev.filter((i) => {
-        const { inviteId: id } = getInviteIds(i);
-        return id !== inviteId;
-      }));
-    } catch (err) {
-      console.error("Failed to decline invite:", err);
-    }
+  // Mock numbers - TODO: Calculate from real data
+  const summary = {
+    total: -67.7,
+    owedToYou: 57.8,
+    youOwe: 125.5,
   };
 
   // If a group is selected, show the detail view
