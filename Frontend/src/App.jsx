@@ -1,3 +1,4 @@
+import React from "react";
 import { useEffect, useState } from "react";
 import { supabase } from "./services/supabase";
 import Login from "./pages/Login";
@@ -21,7 +22,7 @@ export default function App() {
 
   if (loading) return null;
 
-  if (!session) return <Login />;
+  if (!session) return <Login/>;
 
   return (
     <div className="min-h-screen p-6">
