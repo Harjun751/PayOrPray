@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { expensesApi, setAuthFromSupabase } from "../services/api";
 import { supabase } from "../services/supabase";
+import ExpenseItem from "../components/ExpenseItem";
 
 export default function GroupDetail({ groupId, groupName, onBack }) {
   const [expenses, setExpenses] = useState([]);
@@ -64,21 +65,6 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
       fetchGroupData();
     }
   }, [groupId]);
-
-  const formatAmount = (amountCents, currency = 'SGD') => {
-    const amount = amountCents / 100;
-    return `${currency} ${amount.toFixed(2)}`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-SG', { 
-      month: 'short', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   // Handle expense form input changes
   const handleExpenseInputChange = (e) => {
@@ -424,38 +410,11 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
               ) : (
                 <div className="space-y-3">
                   {expenses.map((expense) => (
-                    <div
-                      key={expense.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center text-white font-semibold">
-                            {expense.category?.[0]?.toUpperCase() || 'E'}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{expense.title}</h3>
-                            <p className="text-sm text-gray-600">
-                              {formatDate(expense.created_at)}
-                              {expense.notes && ` • ${expense.notes}`}
-                            </p>
-                            {expense.category && (
-                              <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
-                                {expense.category}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">
-                          {formatAmount(expense.amount_cents, expense.currency)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Paid by {members.find(m => m.PersonID === expense.payer_id)?.Name || 'Unknown'}
-                        </div>
-                      </div>
-                    </div>
+                    <ExpenseItem 
+                      key={expense.id} 
+                      expense={expense} 
+                      members={members}
+                    />
                   ))}
                 </div>
               )}
