@@ -3,7 +3,7 @@ info:
   title: PayOrPray Backend API
   description: >
     Backend API for the PayOrPray web app.
-  version: 0.1.1
+  version: '0.1'
 
 paths:
   /trips:
@@ -41,8 +41,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/TripCreate'
+            schema: { type: string }
             examples:
               example:
                 value:
@@ -65,7 +64,7 @@ paths:
                 value:
                   TripID: 42
                   Description: "Japan Trip"
-                  People: []
+                  People: [ ]
         "400":
           description: Invalid input (e.g., empty description)
           content:
@@ -524,12 +523,127 @@ paths:
               application/json:
                 schema:
                   $ref: '#/components/schemas/Error'
+
   
+  /trips/{tripId}/expenses/{expenseId}/splits:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get the split for an expense
+      description: Returns the allocation of the expense amount across its participants.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: expenseId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseSplit'
+              examples:
+                example:
+                  value:
+                    Splits:
+                      - PersonID: 21
+                        Amount: 30.00
+                      - PersonID: 22
+                        Amount: 70.00
+        "401":
+          description: Missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Forbidden — caller does not have access to this expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Trip or expense not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      security:
+        - bearerAuth: []
+      summary: Set or replace the split for an expense
+      description: >
+        Replaces the entire split. The sum of all split Amount values must exactly equal the expense Amount.
+        All PersonID entries must be participants of the expense.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: expenseId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseSplit'
+            examples:
+              example:
+                value:
+                  Splits:
+                    - PersonID: 21
+                      Amount: 30.00
+                    - PersonID: 22
+                      Amount: 70.00
+      responses:
+        "200":
+          description: Split set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpenseSplit'
+        "400":
+          description: Invalid split (sum mismatch, unknown participant, negative amount, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+            examples:
+              sumMismatch:
+                value:
+                  code: "BAD_REQUEST"
+                  message: "Split amounts must sum to the expense Amount."
+        "401":
+          description: Missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Forbidden — caller cannot modify splits for this expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Trip or expense not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 
 components:
   schemas:
-
     Person:
       type: object
       properties:
@@ -647,9 +761,27 @@ components:
           type: string
           format: date-time
 
+  ExpenseSplit:
+    type: object
+    required: [Splits]
+    properties:
+      Splits:
+        type: array
+        minItems: 1
+        items:
+          $ref: '#/components/schemas/SplitEntry'
+    description: >
+      A complete allocation of the expense amount across participants. The sum of Amount
+      across all entries must equal the expense Amount.
+          
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
 
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/harjun7517/PayOrPray/0.1
