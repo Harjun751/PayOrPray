@@ -50,5 +50,18 @@ async function searchPerson(req, res) {
     if (error) return res.status(500).send(error);
     return res.status(200).json(data);
 }
+async function getMe(req, res) {
+    const userId = req.user.id;
 
-module.exports = { getPeople, searchPerson };
+    const { data, error } = await supabase.from('users')
+        .select('id, name, phone_no')
+        .eq('id', userId)
+        .single();
+
+    if (error != null) {
+        return res.send(error)
+    }
+    return res.status(200).json(data);
+}
+
+module.exports = { getPeople, searchPerson, getMe };

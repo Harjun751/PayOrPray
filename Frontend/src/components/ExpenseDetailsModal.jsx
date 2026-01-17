@@ -1,4 +1,5 @@
 import { useState } from "react";
+import GambleTime from "./GambleTime";
 
 export default function ExpenseDetailsModal({
   isOpen,
@@ -12,6 +13,7 @@ export default function ExpenseDetailsModal({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [gambleTimeOpen, setGambleTimeOpen] = useState(false);
   const [detailsSelectedMembers, setDetailsSelectedMembers] = useState([]);
   const [editFormData, setEditFormData] = useState({
     title: '',
@@ -71,9 +73,9 @@ export default function ExpenseDetailsModal({
     if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    
-    return date.toLocaleDateString('en-SG', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-SG', {
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -129,14 +131,14 @@ export default function ExpenseDetailsModal({
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Who Paid</h4>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
-                    {expense.payer && typeof expense.payer === 'object' 
+                    {expense.payer && typeof expense.payer === 'object'
                       ? expense.payer.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
                       : members.find(m => m.PersonID === expense.payer_id)?.Name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
                     }
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">
-                      {expense.payer && typeof expense.payer === 'object' 
+                      {expense.payer && typeof expense.payer === 'object'
                         ? expense.payer.name
                         : members.find(m => m.PersonID === expense.payer_id)?.Name || 'Unknown'
                       }
@@ -208,7 +210,7 @@ export default function ExpenseDetailsModal({
                   Delete
                 </button>
                 <button
-                  onClick={() => alert('Gamble - Coming Soon!')}
+                  onClick={() => setGambleTimeOpen(true)}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-accent-500 text-white rounded-lg font-medium hover:bg-accent-600 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,6 +219,21 @@ export default function ExpenseDetailsModal({
                   Gamble
                 </button>
               </div>
+              {/* GambleTime modal */}
+              <GambleTime
+                open={gambleTimeOpen}
+                onClose={() => setGambleTimeOpen(false)}
+                title={`Gamble: ${expense?.title || 'Expense'}`}
+                expense={expense}
+              >
+                <div className="space-y-4">
+                  <p className="text-gray-700">Place your gamble content here for "{expense?.title}".</p>
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 bg-primary-500 text-white rounded-lg">Do it</button>
+                    <button onClick={() => setGambleTimeOpen(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Close</button>
+                  </div>
+                </div>
+              </GambleTime>
             </>
           ) : (
             // Edit Mode

@@ -153,4 +153,12 @@ export const peopleApi = {
   },
 };
 
+// Me API - fetch current user's basic info { id, name, user }
+export const meApi = {
+  get: async () => {
+    const response = await api.get('/me');
+    return response.data;
+  },
+};
+
 export default api;
