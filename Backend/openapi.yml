@@ -1,0 +1,655 @@
+openapi: 3.0.4
+info:
+  title: PayOrPray Backend API
+  description: >
+    Backend API for the PayOrPray web app.
+  version: 0.1.1
+
+paths:
+  /trips:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Obtain all trips for the user.
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+      responses:
+        "200":
+          description: Successful GET
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthenticatedTripGet'
+              examples:
+                tripsExample:
+                  value:
+                    - TripID: 23
+                      Owner: 123
+                      Description: "Japan Trip"
+                      People:
+                        - { PersonID: 21, Name: "Dingus", Number: "+81 123123123" }
+                        - { PersonID: 22, Name: "Wingus", Number: "+12 12342134" }
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a new trip
+      description: Creates a new trip for the authenticated user. Only a Description is required.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TripCreate'
+            examples:
+              example:
+                value:
+                  Description: "Japan Trip"
+      responses:
+        "201":
+          description: Trip created
+          headers:
+            Location:
+              description: URI of the newly created trip resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Trip'
+            examples:
+              created:
+                value:
+                  TripID: 42
+                  Description: "Japan Trip"
+                  People: []
+        "400":
+          description: Invalid input (e.g., empty description)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /trips/{tripId}/invites:
+    get:
+      security:
+        - bearerAuth: []
+      summary: View invitations for a trip
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invite'
+              examples:
+                byUserId:
+                  value:
+                    - InviteID: 55
+                      TripID: 23
+                      UserID: 987
+                      Status: "pending"
+                      CreatedAt: "2026-01-17T04:30:00Z"
+                      ExpiresAt: "2026-01-24T04:30:00Z"
+                    - InviteID: 56
+                      TripID: 23
+                      UserID: 987
+                      Status: "pending"
+                      CreatedAt: "2026-01-17T04:30:00Z"
+                      ExpiresAt: "2026-01-24T04:30:00Z"
+
+    post:
+      security:
+        - bearerAuth: []
+      summary: Invite a person to a trip
+      description: >
+        Creates an invitation for the specified trip. The payload must include a UserID. Only the owner may invite new users.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          description: Identifier of the trip
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/InviteCreateUserId'
+            examples:
+              byUserId:
+                value:
+                  UserID: 987
+      responses:
+        "201":
+          description: Invitation created
+          headers:
+            Location:
+              description: URI of the created invitation resource
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invite'
+              examples:
+                createdInvite:
+                  value:
+                    InviteID: 55
+                    TripID: 23
+                    UserID: 987
+                    Status: "pending"
+                    CreatedAt: "2026-01-17T04:30:00Z"
+                    ExpiresAt: "2026-01-24T04:30:00Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid:
+                  value:
+                    code: "BAD_REQUEST"
+                    message: "Provide either Email or UserID."
+        "401":
+          description: Missing or invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Caller lacks permission to invite to this trip
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "409":
+          description: Invite already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /trips/{tripId}/invites/{inviteId}/accept:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Accept a trip invitation
+      description: >
+        Accepts the invitation and adds the invitee to the trip. Returns the updated invitation.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invite'
+              examples:
+                accepted:
+                  value:
+                    InviteID: 55
+                    TripID: 23
+                    UserID: 456
+                    Status: "accepted"
+                    CreatedAt: "2026-01-17T04:30:00Z"
+                    ExpiresAt: "2026-01-24T04:30:00Z"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Not authorized to accept this invite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Trip or invite not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "409":
+          description: Invite already processed or expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "410":
+          description: Invite expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /trips/{tripId}/invites/{inviteId}/decline:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Decline a trip invitation
+      description: >
+        Declines the invitation. Only the invitee can decline.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Invitation declined
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invite'
+              examples:
+                declined:
+                  value:
+                    InviteID: 55
+                    TripID: 23
+                    UserID: 456
+                    Status: "declined"
+                    CreatedAt: "2026-01-17T04:30:00Z"
+                    ExpiresAt: "2026-01-24T04:30:00Z"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Not authorized to decline this invite
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Trip or invite not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "409":
+          description: Invite already processed or expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "410":
+          description: Invite expired
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /trips/{tripId}/people:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get people in a trip
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Person'
+              examples:
+                example:
+                  value:
+                    - PersonID: 21
+                      Name: "Dingus"
+                      Number: "+6591128231"
+                    - PersonID: 22
+                      Name: "Wingus"
+                      Number: "+6591128231"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /trips/{tripId}/expenses:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get all expenses for a trip
+      description: Returns a list of all expenses associated with the specified trip.
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          description: The ID of the trip
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+              examples:
+                example:
+                  value:
+                    - ExpenseID: 901
+                      TripID: 23
+                      Amount: 125.50
+                      Currency: "USD"
+                      Payer: 21
+                      Participants: [21, 22]
+                      Category: "Meals"
+                      CreatedAt: "2026-01-17T04:45:00Z"
+                    - ExpenseID: 902
+                      TripID: 23
+                      Amount: 40.00
+                      Currency: "USD"
+                      Payer: 22
+                      Participants: [21, 22]
+                      Category: "Transport"
+                      CreatedAt: "2026-01-17T05:10:00Z"
+        "401":
+          description: Missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "403":
+          description: Forbidden — caller does not have access to this trip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      security:
+        - bearerAuth: []
+      summary: Add an expense to a trip
+      parameters:
+        - name: tripId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpenseCreate'
+            examples:
+              example:
+                value:
+                  Amount: 125.50
+                  Currency: "USD"
+                  Payer: 21
+                  Participants: [21, 22]
+                  Category: "Meals"
+      responses:
+        "201":
+          description: Expense created
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+              examples:
+                created:
+                  value:
+                    ExpenseID: 901
+                    TripID: 23
+                    Amount: 125.50
+                    Currency: "USD"
+                    Payer: 21
+                    Participants: [21, 22]
+                    Category: "Meals"
+                    CreatedAt: "2026-01-17T04:45:00Z"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidParticipants:
+                  value:
+                    code: "BAD_REQUEST"
+                    message: "All Participants must be members of the trip."
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        "404":
+          description: Trip not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /trips/{tripId}/expenses/{expenseId}:
+    delete:
+        security:
+          - bearerAuth: []
+        summary: Delete an expense from a trip
+        description: Deletes the specified expense belonging to the given trip.
+        parameters:
+          - name: tripId
+            in: path
+            required: true
+            schema:
+              type: integer
+          - name: expenseId
+            in: path
+            required: true
+            schema:
+              type: integer
+        responses:
+          "204":
+            description: Expense deleted successfully (no content returned)
+          "401":
+            description: Missing or invalid credentials
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+          "403":
+            description: Forbidden — caller not allowed to delete expenses in this trip
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+          "404":
+            description: Trip or expense not found
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/Error'
+  
+
+
+components:
+  schemas:
+
+    Person:
+      type: object
+      properties:
+        PersonID:
+          type: integer
+        Name:
+          type: string
+        Number:
+          type: string
+
+    Trip:
+      type: object
+      required: [TripID, Description, People]
+      properties:
+        TripID:
+          type: integer
+        Description:
+          type: string
+        Owner:
+          type: integer
+        People:
+          type: array
+          items:
+            $ref: '#/components/schemas/Person'
+
+    AuthenticatedTripGet:
+      type: array
+      items:
+        $ref: '#/components/schemas/Trip'
+
+    Invite:
+      type: object
+      required: [InviteID, TripID, Status, CreatedAt]
+      properties:
+        InviteID:
+          type: integer
+        TripID:
+          type: integer
+        UserID:
+          type: integer
+          nullable: false
+        Status:
+          type: string
+          enum: [pending, accepted, declined, expired, revoked]
+        CreatedAt:
+          type: string
+          format: date-time
+        ExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    InviteCreateUserId:
+      type: object
+      required: [UserID]
+      properties:
+        UserID:
+          type: integer
+          description: Existing user ID to invite
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    ExpenseCreate:
+      type: object
+      required: [Amount, Currency, Payer, Participants, Category]
+      properties:
+        Amount:
+          type: number
+          format: double
+          minimum: 0.01
+        Currency:
+          type: string
+          example: "USD"
+        Payer:
+          type: integer
+        Participants:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+        Category:
+          type: string
+          example: "Meals"
+
+    Expense:
+      type: object
+      required:
+        [ExpenseID, TripID, Amount, Currency, Payer, Participants, Category, CreatedAt]
+      properties:
+        ExpenseID:
+          type: integer
+        TripID:
+          type: integer
+        Amount:
+          type: number
+          format: double
+        Currency:
+          type: string
+        Payer:
+          type: integer
+        Participants:
+          type: array
+          items:
+            type: integer
+        Category:
+          type: string
+        CreatedAt:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
