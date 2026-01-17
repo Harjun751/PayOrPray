@@ -5,12 +5,15 @@ async function getDebt(req, res) {
     let people;
     {
         const {data, error} = await supabase.from('trip_members')
-            .select()
+            .select(`*,
+            users!inner (
+              name
+            )`)
             .eq("trip_id", req.params.tripId);
         if (error != null){
             return res.send(error);
         }
-        people = data.map(x => x.user_id);
+        people = data;
     }
 
     let expenses;
@@ -32,6 +35,7 @@ async function getDebt(req, res) {
 
 
     let paymentMatrix = getPaymentMatrix(people, expenses)
+    people = people.map(x => x.users.name);
     let payments = simplifyTransfers(paymentMatrix);
     let instructions = getSimplifiedDebt(people, payments);
     return res.status(200).json(instructions)
@@ -40,9 +44,9 @@ async function getDebt(req, res) {
 function getPaymentMatrix(people, expenses) {
     let paymentGraph = [];
     for (let i = 0; i < expenses.length; i++) {
-        let debt_payer = people.indexOf(expenses[i].user_id)
-        let debt_earner = people.indexOf(expenses[i].expense.payer);
-        paymentGraph.push({ from: expenses[i].user_id, to: expenses[i].expense.payer, amount: expenses[i].share_cents });
+        let fromP = people.filter(x => x.user_id === expenses[i].user_id)[0];
+        let toP = people.filter(x => x.user_id === expenses[i].expense.payer)[0];
+        paymentGraph.push({ from: fromP.users.name, to: toP.users.name, amount: expenses[i].share_cents });
     }
     return paymentGraph;
 }
@@ -51,9 +55,8 @@ function getPaymentMatrix(people, expenses) {
 /**
  * Simplify transfers by netting out opposite directions and aggregating duplicates.
  *
- * @param {Array<{from:number, to:number, amount:number}>} transfers
- * @param {Object} [options]
- * @returns {Array<{from:number, to:number, amount:number}>}
+ * @param {Array<{from:string|number, to:string|number, amount:number}>} transfers
+ * @returns {Array<{from:string|number, to:string|number, amount:number}>}
  */
 function simplifyTransfers(transfers) {
     // 1) Aggregate duplicates first: sum amounts for identical (from,to)
@@ -65,19 +68,17 @@ function simplifyTransfers(transfers) {
     }
 
     // 2) Net out opposite directions for each unordered pair
-    // We'll iterate the aggregated keys, and for each pair (a,b), compute net = sum(a->b) - sum(b->a).
-    const visitedPairs = new Set(); // track unordered pairs like "min|max" so we only process once
+    const visitedPairs = new Set(); // track unordered pairs like "a|b" (lexicographic min|max) so we only process once
     const result = [];
 
     const getAmount = (a, b) => agg.get(`${a}|${b}`) || 0;
 
     for (const key of agg.keys()) {
-        const [aStr, bStr] = key.split('|');
-        const a = Number(aStr);
-        const b = Number(bStr);
-        if (a === b) continue; // self transfers already handled above
+        const [a, b] = key.split('|');
+        if (a === b) continue; // self transfers ignored
 
-        const pairKey = `${Math.min(a, b)}|${Math.max(a, b)}`;
+        // Use lexicographic order to form an unordered pair key for strings/numeric ids
+        const pairKey = a < b ? `${a}|${b}` : `${b}|${a}`;
         if (visitedPairs.has(pairKey)) continue;
         visitedPairs.add(pairKey);
 
@@ -93,8 +94,13 @@ function simplifyTransfers(transfers) {
         // if net === 0, nothing to push (they cancel out)
     }
 
-    // 4) Sort (optional): by from, then to for stable, readable output
-    result.sort((x, y) => (x.from - y.from) || (x.to - y.to));
+    // Sort by from then to for stable, readable output (string-safe)
+    result.sort((x, y) => {
+        const fa = String(x.from);
+        const fb = String(y.from);
+        if (fa === fb) return String(x.to).localeCompare(String(y.to));
+        return fa.localeCompare(fb);
+    });
 
     return result;
 }

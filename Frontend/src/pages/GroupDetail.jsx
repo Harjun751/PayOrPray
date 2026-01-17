@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { expensesApi, setAuthFromSupabase, peopleApi, inviteAPI } from "../services/api";
+import { expensesApi, setAuthFromSupabase, peopleApi, inviteAPI, debtApi } from "../services/api";
 import { supabase } from "../services/supabase";
 import ExpensesList from "../components/ExpensesList";
 import MembersList from "../components/MembersList";
@@ -42,6 +42,12 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
   const selectedIds = selectedPeople.map(p => p.id);
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSendError, setInviteSendError] = useState('');
+
+  // Settle-up modal state
+  const [settleModalOpen, setSettleModalOpen] = useState(false);
+  const [settleLoading, setSettleLoading] = useState(false);
+  const [settleError, setSettleError] = useState('');
+  const [settleData, setSettleData] = useState([]); // expected: [{ from, to, amount }, ...]
 
   useEffect(() => {
     const fetchGroupData = async () => {
@@ -152,12 +158,15 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
         share_cents: perPerson + (index < remainder ? 1 : 0)
       }));
 
-      // Call backend API to create expense and splits
-      const newExpense = await expensesApi.create(groupId, {
-        ...expenseFormData,
+
+      let expense = {
         payer: selectedPayer,
         expense_splits: splits,
-      });
+        ...expenseFormData,
+      }
+
+      // Call backend API to create expense and splits
+      const newExpense = await expensesApi.create(groupId, expense);
 
       // Add expense_splits to the new expense for display if not already present
       if (!newExpense.expense_splits) {
@@ -226,6 +235,8 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
         ...editFormData,
         expense_splits: splits
       };
+
+      console.log(updateData);
 
       const result = await expensesApi.update(groupId, selectedExpense.id, updateData);
 
@@ -321,6 +332,23 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
     }
   };
 
+  const handleSettleUp = async () => {
+    try {
+      setSettleError('');
+      setSettleLoading(true);
+      await setAuthFromSupabase();
+
+      const data = await debtApi.get(groupId);
+      setSettleData(Array.isArray(data) ? data : []);
+      setSettleModalOpen(true);
+    } catch (err) {
+      console.error('Settle up failed', err);
+      setSettleError(err.response?.data?.error || err.message || 'Failed to fetch debts');
+    } finally {
+      setSettleLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -358,6 +386,18 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left: Expenses */}
           <div className="lg:col-span-2">
+            {/* Settle up button (above expenses) */}
+            <div className="mb-4 flex items-center justify-start">
+              <button
+                onClick={handleSettleUp}
+                className="px-3 py-1.5 bg-green-600 text-white rounded-md disabled:opacity-60"
+                disabled={settleLoading}
+              >
+                {settleLoading ? 'Loading...' : 'Settle up'}
+              </button>
+              {settleError && <div className="ml-3 text-sm text-red-500">{settleError}</div>}
+            </div>
+
             <ExpensesList
               expenses={expenses}
               members={members}
@@ -467,6 +507,43 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
                   className="px-3 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-60"
                 >
                   {inviteSending ? 'Sending...' : 'Send Invite'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settle Modal */}
+        {settleModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setSettleModalOpen(false)} />
+            <div className="relative z-10 w-full max-w-md bg-white rounded-lg shadow-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold">Settle Up</h3>
+                <button className="text-gray-500" onClick={() => setSettleModalOpen(false)}>✕</button>
+              </div>
+
+              <div className="mb-3">
+                {settleLoading && <div className="text-sm text-gray-500">Loading...</div>}
+                {settleError && <div className="text-sm text-red-500">{settleError}</div>}
+                {!settleLoading && settleData.length === 0 && (
+                  <div className="text-sm text-gray-500">No debts to settle</div>
+                )}
+                <ul className="divide-y divide-gray-100">
+                  {settleData.map((d, idx) => (
+                    <li key={idx} className="py-2 text-sm">
+                      {`${d.from} should pay ${d.amount} to ${d.to}`}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setSettleModalOpen(false)}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md"
+                >
+                  Close
                 </button>
               </div>
             </div>

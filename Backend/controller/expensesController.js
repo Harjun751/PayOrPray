@@ -18,11 +18,11 @@ async function addExpense(req, res) {
     try {
         const userId = req.user.id;
         const tripId = req.params.tripId;
-        const { title, currency, amount_cents, notes, category, splits } = req.body;
+        const { title, currency, amount_cents, notes, category, splits, payer } = req.body;
 
         const expense = await expensesModel.addExpense(
             tripId,
-            userId,
+            payer,
             title,
             currency,
             amount_cents,

@@ -70,13 +70,15 @@ export const expensesApi = {
 
   // Create a new expense
   create: async (tripId, expenseData) => {
+    console.log(expenseData);
     const response = await api.post(`/trips/${tripId}/expenses`, {
       title: expenseData.title,
       currency: expenseData.currency || 'SGD',
       amount_cents: expenseData.amount_cents,
       notes: expenseData.notes,
       category: expenseData.category,
-      splits: expenseData.splits,
+      payer: expenseData.payer,
+      splits: expenseData.expense_splits,
     });
     return response.data;
   },
@@ -108,6 +110,14 @@ export const owedApi = {
   // Returns: { owed: number } - positive if owed to you, negative if you owe
   get: async (tripId) => {
     const response = await api.get(`/trips/${tripId}/owed`);
+    return response.data;
+  },
+};
+
+// Debt API (per UI request): GET /trip/{tripId}/debt
+export const debtApi = {
+  get: async (tripId) => {
+    const response = await api.get(`/trips/${tripId}/debt`);
     return response.data;
   },
 };
