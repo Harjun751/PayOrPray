@@ -1,6 +1,6 @@
 // Backend/controller/expenseSplitsController.js
 const supabase = require("../database.js");
-const getUserId = require("../utils/getAuth.js");
+// const getUserId = require("../utils/getAuth.js");
 
 function toCents(amount) {
   const n = Number(amount);

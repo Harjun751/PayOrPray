@@ -24,13 +24,41 @@ async function getAllExpenses(tripId,userId) {
     return data;
 }
 
-async function addExpense(tripId,userId,title,currency,amount_cents,notes,category){
-    const {data, error} = await supabase
-    .from("expense")
-    .insert({payer:userId, title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, trip_id:tripId})
+async function addExpense(tripId, userId, title, currency, amount_cents, notes, category, splits) {
+    // 1. Insert the expense
+    const { data: expenseData, error: expenseError } = await supabase
+        .from("expense")
+        .insert({
+            payer: userId,
+            title,
+            currency,
+            amount_cents,
+            notes,
+            category,
+            trip_id: tripId
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+    if (expenseError) throw expenseError;
+    if (!expenseData || !expenseData.id) throw new Error("Expense creation failed");
+    console.log(expenseData)
+    // 2. Insert splits if provided
+    if (Array.isArray(splits) && splits.length > 0) {
+        const splitsPayload = splits.map(split => ({
+            expense_id: expenseData.id,
+            user_id: split.user_id,
+            share_cents: split.share_cents
+        }));
+
+        const { error: splitsError } = await supabase
+            .from('expense_splits')
+            .insert(splitsPayload);
+
+        if (splitsError) throw splitsError;
+    }
+
+    return expenseData;
 }
 
 async function deleteExpense(expenseId){
