@@ -1,11 +1,10 @@
 const tripsModel = require("../model/expensesModel");
-const getUserId = require('../utils/getAuth.js');
 
 
 //get all expenses of a trip while ensuring user is in that trip
 async function listExpenses(req, res) {
   try {
-    const userId = getUserId(req)
+    const userId = req.user.id;
     tripId = req.params.tripId;           // <-- from URL
     console.log(tripId)
     const expenses = await tripsModel.getAllExpenses(tripId,userId);
@@ -17,7 +16,8 @@ async function listExpenses(req, res) {
 
 async function addExpense(req, res) {
     try {
-        const userId = getUserId(req)
+        const userId = req.user.id;
+        console.log(req.user.id)
         tripId = req.params.tripId;           // <-- from URL
         console.log(tripId)
         const title = req.body.title
@@ -43,4 +43,26 @@ async function deleteExpense(req, res){
     }
 }
 
-module.exports = {listExpenses, addExpense, deleteExpense};
+async function updateExpense(req, res) {
+    try {
+        const expenseId = req.params.expenseId;
+        const title = req.body.title;
+        const currency = req.body.currency;
+        const amount_cents = req.body.amount_cents;
+        const notes = req.body.notes;
+        const category = req.body.category;
+        const payer_id = req.body.payer_id;
+
+        // Validate required fields
+        if (!title || !currency || amount_cents === undefined) {
+            return res.status(400).json({ error: "Missing required fields: title, currency, amount_cents" });
+        }
+
+        const updatedExpense = await tripsModel.updateExpense(expenseId, title, currency, amount_cents, notes, category, payer_id);
+        return res.status(200).json(updatedExpense);
+    } catch (err) {
+        return res.status(500).json({ error: err.message ?? String(err) });
+    }
+}
+
+module.exports = {listExpenses, addExpense, updateExpense, deleteExpense};

@@ -1,13 +1,12 @@
 const supabase = require('../database.js');
-const getUserId = require('../utils/getAuth.js');
 
 async function getInvites(req, res) {
-    const userId = getUserId(req);
-    if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
+    const userId = req.user.id;
+    if (!userId) return res.status(401).json({code: "UNAUTHORIZED", message: "Missing credentials"});
 
-    const { data, error } = await supabase.from('invites')
+    const {data, error} = await supabase.from('invites')
         .select()
-        .eq("trip_id", req.params.tripid);
+        .eq("trip_id", req.params.tripId);
 
     if (error != null) {
         return res.send(error);
@@ -17,7 +16,7 @@ async function getInvites(req, res) {
 }
 
 async function getInvitesForUser(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
     // check if we need this endpoint - get pending invite for users so they can perform actions
     const { data, error } = await supabase.from('invites')
@@ -32,13 +31,13 @@ async function getInvitesForUser(req, res) {
 }
 
 async function addInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
     {
         const {data, error} = await supabase.from('trips')
             .select()
-            .eq("id", req.params.tripid)
+            .eq("id", req.params.tripId)
             .single();
         if (error != null) {
             return res.send(error);
@@ -59,7 +58,7 @@ async function addInvite(req, res) {
     let currDate = new Date();
     let thirtyDaysFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
     const invite = {
-      "trip_id": req.params.tripid,
+      "trip_id": req.params.tripId,
       "user_id": req.body.UserID,
       "status": "pending",
       "created_at": currDate.toISOString(),
@@ -80,9 +79,9 @@ async function addInvite(req, res) {
 }
 
 async function acceptInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     const inviteId = req.params.inviteid;
-    const tripId = req.params.tripid;
+    const tripId = req.params.tripId;
 
     // First check that the userid matches the target of the invite
     {
@@ -128,9 +127,9 @@ async function acceptInvite(req, res) {
 }
 
 async function declineInvite(req, res) {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     const inviteId = req.params.inviteid;
-    const tripId = req.params.tripid;
+    const tripId = req.params.tripId;
 
     // First check that the userid matches the target of the invite
     {

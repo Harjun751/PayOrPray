@@ -4,9 +4,24 @@ var app = express();
 app.use(express.json()); // so POST bodies work
 app.use(express.urlencoded({ extended: true })); // optional (for form posts)
 
+// Auth Middleware
+const verifyJWT = require("../middleware/auth.js");
+var cors = require('cors')
+
 // QR
 var qr = require('../model/paynow.js')
 const supabase = require('../database.js');
+
+
+app.use(
+    cors({
+        origin: [
+            "http://localhost:5173",
+            process.env.FRONTEND_ORIGIN
+        ],
+        credentials: true
+    })
+)
 
 // Exisitng routes
 app.get("/test", async (req, res) => {
@@ -34,28 +49,35 @@ app.get('/generateQR',function(req, res){
 
 // TRIP
 const tripsController = require("./tripsController");
-app.get("/trips", tripsController.listTrips);
-app.post("/trips", tripsController.createTrip);
+app.get("/trips", verifyJWT, tripsController.listTrips);
+app.post("/trips", verifyJWT, tripsController.createTrip);
+
+const tripPeopleController = require("./peopleController");
+app.get("/trips/:tripId/people", verifyJWT, tripPeopleController.getPeople)
 
 // INVITES
 const inviteController = require("./inviteController");
-app.get("/trips/:tripId/invites", inviteController.getInvites);
-
-app.get("/invites", inviteController.getInvitesForUser);
-app.post("/trips/:tripid/invites", inviteController.addInvite);
-app.post("/trips/:tripid/invites/:inviteid/accept", inviteController.acceptInvite);
-app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInvite);
+app.get("/trips/:tripId/invites", verifyJWT, inviteController.getInvites);
+app.get("/invites", verifyJWT, inviteController.getInvitesForUser);
+app.post("/trips/:tripId/invites", verifyJWT, inviteController.addInvite);
+app.post("/trips/:tripId/invites/:inviteid/accept", verifyJWT, inviteController.acceptInvite);
+app.post("/trips/:tripId/invites/:inviteid/decline", verifyJWT, inviteController.declineInvite);
 
 // EXPENSES
 const expensesController = require("./expensesController.js")
-app.get("/trips/:tripId/expense", expensesController.listExpenses)
-app.post("/trips/:tripId/expense", expensesController.addExpense)
-app.delete("/trips/:tripId/expense/:expenseId", expensesController.deleteExpense)
+app.get("/trips/:tripId/expenses", expensesController.listExpenses)
+app.post("/trips/:tripId/expenses", expensesController.addExpense)
+app.delete("/trips/:tripId/expenses/:expenseId", expensesController.deleteExpense)
+
+const owedController = require("./owedController.js")
+app.get("/trips/:tripId/owed", verifyJWT, owedController.getOwed);
+
 
 // EXPENSESPLITS
 const expenseSplitsController = require("./expensesSplitsController");
 app.get("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.getExpenseSplits);
 app.put("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.putExpenseSplits);
+
 
 
 module.exports = app;

@@ -11,18 +11,18 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
 
   // 1) membership -> tripIds
   const { data: memberships, error: mErr } = await supabase
-    .from("group_members")
-    .select("group_id")
+    .from("trip_members")
+    .select("trip_id")
     .eq("user_id", userId);
 
   if (mErr) throw mErr;
 
-  const tripIds = (memberships || []).map((m) => m.group_id);
+  const tripIds = (memberships || []).map((m) => m.trip_id);
   if (tripIds.length === 0) return [];
 
   // 2) trips (paged)
   const { data: trips, error: tErr } = await supabase
-    .from("groups")
+    .from("trips")
     .select("id, owner_id, name, created_at")
     .in("id", tripIds)
     .order("created_at", { ascending: false })
@@ -37,10 +37,9 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
   // IMPORTANT: this assumes you have FK: group_members.user_id -> users.id
   // so we can do a join select.
   const { data: peopleRows, error: pErr } = await supabase
-    .from("group_members")
-    .select("group_id, users(id, name, phone_no)")
-    .in("group_id", pagedTripIds);
-
+    .from("trip_members")
+    .select("trip_id, users(id, name, phone_no)")
+    .in("trip_id", pagedTripIds);
   if (pErr) throw pErr;
 
   const peopleByTrip = new Map();
@@ -66,17 +65,18 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
   }));
 }
 
-async function createTrip({ ownerId, description }) {
+async function createTrip({ ownerId, name, description }) {
   const invite_code = genInviteCode();
 
   // 1) create group
   const { data: created, error: cErr } = await supabase
-    .from("groups")
+    .from("trips")
     .insert([
       {
-        name: description,
+        name: name,
         owner_id: ownerId,
-        invite_code,
+        description: description,
+        invite_code: invite_code,
       },
     ])
     .select("id, name, owner_id")
@@ -86,8 +86,8 @@ async function createTrip({ ownerId, description }) {
 
   // 2) add owner as member
   const { error: gmErr } = await supabase
-    .from("group_members")
-    .insert([{ group_id: created.id, user_id: ownerId }]);
+    .from("trip_members")
+    .insert([{ trip_id: created.id, user_id: ownerId }]);
 
   if (gmErr) throw gmErr;
 

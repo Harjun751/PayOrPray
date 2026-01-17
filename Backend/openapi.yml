@@ -101,6 +101,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /trips/{tripId}/owed:
+    get:
+      security:
+        - bearerAuth: [ ]
+      summary: View total owed value for a trip
+      responses:
+        "200":
+          description: Get the total owed value for a trip
+          content:
+            application/json:
+              schema: { type: integer }
+              examples:
+                normal:
+                  value:
+                    Owed: 100
+
   /trips/{tripId}/invites:
     get:
       security:
