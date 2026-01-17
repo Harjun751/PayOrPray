@@ -2,15 +2,23 @@ const supabase = require("../database.js");
 
 async function getAllExpenses(tripId,userId) {
     const { data, error } = await supabase
-    .from("expenses")
+    .from("expense")
     .select(`
         *,
-        trips!inner (
-        group_members!group_members_group_id_fkey!inner ( user_id )
+        expense_splits (
+            user_id,
+            share_cents
+        ),
+        payer:users!expense_payer_fkey (
+            id,
+            name,
+            phone_no
         )
     `)
-    .eq("trips_id", tripId)
-    .eq("trips.group_members.user_id", userId);
+    .eq("trip_id", tripId);
+
+    if (error) throw error;
+    return data;
 
     if (error) throw error;
     return data;
@@ -18,8 +26,8 @@ async function getAllExpenses(tripId,userId) {
 
 async function addExpense(tripId,userId,title,currency,amount_cents,notes,category){
     const {data, error} = await supabase
-    .from("expenses")
-    .insert({payer_id:userId, title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, trips_id:tripId})
+    .from("expense")
+    .insert({payer:userId, title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, trip_id:tripId})
 
     if (error) throw error;
     return data;
@@ -27,7 +35,7 @@ async function addExpense(tripId,userId,title,currency,amount_cents,notes,catego
 
 async function deleteExpense(expenseId){
     const {data, error} = await supabase
-    .from ('expenses')
+    .from ('expense')
     .delete()
     .eq('id',expenseId)
 }

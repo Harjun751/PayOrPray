@@ -53,4 +53,30 @@ export  async function testAPI() {
     console.log(resp);
 }
 
+export const expensesApi = {
+  // Get all expenses for a trip
+  list: async (tripId) => {
+    const response = await api.get(`/trips/${tripId}/expenses`);
+    return response.data;
+  },
+
+  // Create a new expense
+  create: async (tripId, expenseData) => {
+    const response = await api.post(`/trips/${tripId}/expenses`, {
+      title: expenseData.title,
+      currency: expenseData.currency || 'SGD',
+      amount_cents: expenseData.amount_cents,
+      notes: expenseData.notes,
+      category: expenseData.category,
+    });
+    return response.data;
+  },
+
+  // Delete an expense
+  delete: async (tripId, expenseId) => {
+    const response = await api.delete(`/trips/${tripId}/expenses/${expenseId}`);
+    return response.data;
+  },
+};
+
 export default api;

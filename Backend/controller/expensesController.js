@@ -17,6 +17,7 @@ async function listExpenses(req, res) {
 async function addExpense(req, res) {
     try {
         const userId = req.user.id;
+        console.log(req.user.id)
         tripId = req.params.tripId;           // <-- from URL
         console.log(tripId)
         const title = req.body.title
