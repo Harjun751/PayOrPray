@@ -25,4 +25,11 @@ async function addExpense(tripId,userId,title,currency,amount_cents,notes,catego
     return data;
 }
 
-module.exports = {getAllExpenses, addExpense};
+async function deleteExpense(expenseId){
+    const {data, error} = await supabase
+    .from ('expenses')
+    .delete()
+    .eq('id',expenseId)
+}
+
+module.exports = {getAllExpenses, addExpense, deleteExpense};

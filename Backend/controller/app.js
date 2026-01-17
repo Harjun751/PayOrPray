@@ -49,6 +49,7 @@ app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInv
 const expensesController = require("./expensesController.js")
 app.get("/trips/:tripId/expenses", expensesController.listExpenses)
 app.post("/trips/:tripId/expenses", expensesController.addExpense)
+app.delete("/trips/:tripId/expenses/:expenseId", expensesController.deleteExpense)
 
 module.exports = app;
 

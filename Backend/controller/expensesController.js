@@ -32,4 +32,15 @@ async function addExpense(req, res) {
     }
 }
 
-module.exports = {listExpenses, addExpense};
+async function deleteExpense(req, res){
+    const expenseId = req.params.expenseId
+    try{
+        const deleteExpense = await tripsModel.deleteExpense(expenseId)
+        return res.status(200).json(deleteExpense)
+    }
+    catch (err){
+        return res.status(500).json({ error: err.message ?? String(err) });
+    }
+}
+
+module.exports = {listExpenses, addExpense, deleteExpense};
