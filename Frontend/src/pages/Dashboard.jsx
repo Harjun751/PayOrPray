@@ -35,8 +35,8 @@ export default function Dashboard({ session, onSignOut }) {
         // Set user ID for API requests
         await setAuthFromSupabase();
 
-        
-        const test= await testAPI();
+        // Fetch trips from backend
+        const trips = await tripsApi.list(1);
         
         // Transform backend data to frontend format
         const transformedGroups = trips.map((trip, index) => {
