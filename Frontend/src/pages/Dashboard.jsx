@@ -5,7 +5,7 @@ import GroupsSection from "../components/dashboard/GroupsSection";
 import QuickActions from "../components/dashboard/QuickActions";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
 import GroupDetail from "./GroupDetail";
-import { tripsApi, setAuthFromSupabase, testAPI, expensesApi } from "../services/api";
+import { tripsApi, setAuthFromSupabase, testAPI, expensesApi, owedApi } from "../services/api";
 
 export default function Dashboard({ session, onSignOut }) {
   const [groups, setGroups] = useState([]);
@@ -40,8 +40,21 @@ export default function Dashboard({ session, onSignOut }) {
         // Fetch trips from backend
         const trips = await tripsApi.list(1);
         
+        // Fetch owed amounts for each trip
+        const tripsWithOwed = await Promise.all(
+          trips.map(async (trip) => {
+            try {
+              const owedData = await owedApi.get(trip.TripID);
+              return { ...trip, owed: owedData.owed };
+            } catch (err) {
+              console.error(`Error fetching owed for trip ${trip.TripID}:`, err);
+              return { ...trip, owed: 0 };
+            }
+          })
+        );
+        
         // Transform backend data to frontend format
-        const transformedGroups = trips.map((trip, index) => {
+        const transformedGroups = tripsWithOwed.map((trip, index) => {
           // Generate member initials from People array
           const memberInitials = trip.People.map(person => {
             const names = person.Name.split(' ');
@@ -56,7 +69,7 @@ export default function Dashboard({ session, onSignOut }) {
             name: trip.Description,
             memberCount: trip.People.length,
             members: memberInitials,
-            balance: 0, // TODO: Calculate from expenses
+            balance: (trip.owed / 100) || 0, // Convert cents to dollars
             accent: colors[index % colors.length],
           };
         });

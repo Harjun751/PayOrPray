@@ -79,4 +79,14 @@ export const expensesApi = {
   },
 };
 
+// Owed API
+export const owedApi = {
+  // Get owed amount for a user in a specific trip
+  // Returns: { owed: number } - positive if owed to you, negative if you owe
+  get: async (tripId) => {
+    const response = await api.get(`/trips/${tripId}/owed`);
+    return response.data;
+  },
+};
+
 export default api;
