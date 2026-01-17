@@ -40,4 +40,11 @@ async function deleteExpense(expenseId){
     .eq('id',expenseId)
 }
 
-module.exports = {getAllExpenses, addExpense, deleteExpense};
+async function updateExpense(expenseId,title,currency,amount_cents,notes,category,payer_id){
+    const {data, error} = await supabase
+    .from('expense')
+    .update({title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, payer_id:payer_id})
+    .eq('id', expenseId)
+}
+
+module.exports = {getAllExpenses, addExpense, deleteExpense, updateExpense};

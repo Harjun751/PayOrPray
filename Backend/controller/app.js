@@ -66,6 +66,7 @@ app.post("/trips/:tripId/invites/:inviteid/decline", verifyJWT, inviteController
 const expensesController = require("./expensesController.js")
 app.get("/trips/:tripId/expenses", verifyJWT, expensesController.listExpenses)
 app.post("/trips/:tripId/expenses", verifyJWT, expensesController.addExpense)
+app.put("/trips/:tripId/expenses/:expenseId", verifyJWT, expensesController.updateExpense)
 app.delete("/trips/:tripId/expenses/:expenseId", verifyJWT, expensesController.deleteExpense)
 
 module.exports = app;

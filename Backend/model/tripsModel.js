@@ -11,18 +11,18 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
 
   // 1) membership -> tripIds
   const { data: memberships, error: mErr } = await supabase
-    .from("trip_members")
-    .select("trip_id")
+    .from("group_members")
+    .select("group_id")
     .eq("user_id", userId);
 
   if (mErr) throw mErr;
 
-  const tripIds = (memberships || []).map((m) => m.trip_id);
+  const tripIds = (memberships || []).map((m) => m.group_id);
   if (tripIds.length === 0) return [];
 
   // 2) trips (paged)
   const { data: trips, error: tErr } = await supabase
-    .from("trips")
+    .from("groups")
     .select("id, owner_id, name, created_at")
     .in("id", tripIds)
     .order("created_at", { ascending: false })
@@ -37,9 +37,9 @@ async function getTripsForUser(userId, page = 1, pageSize = 20) {
   // IMPORTANT: this assumes you have FK: group_members.user_id -> users.id
   // so we can do a join select.
   const { data: peopleRows, error: pErr } = await supabase
-    .from("trip_members")
-    .select("trip_id, users(id, name, phone_no)")
-    .in("trip_id", pagedTripIds);
+    .from("group_members")
+    .select("group_id, users(id, name, phone_no)")
+    .in("group_id", pagedTripIds);
 
   if (pErr) throw pErr;
 
@@ -71,7 +71,7 @@ async function createTrip({ ownerId, description }) {
 
   // 1) create group
   const { data: created, error: cErr } = await supabase
-    .from("trips")
+    .from("groups")
     .insert([
       {
         name: description,
