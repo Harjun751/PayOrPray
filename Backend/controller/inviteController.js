@@ -2,9 +2,9 @@ const supabase = require('../database.js');
 
 async function getInvites(req, res) {
     const userId = req.user.id;
-    if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
+    if (!userId) return res.status(401).json({code: "UNAUTHORIZED", message: "Missing credentials"});
 
-    const { data, error } = await supabase.from('invites')
+    const {data, error} = await supabase.from('invites')
         .select()
         .eq("trip_id", req.params.tripId);
 

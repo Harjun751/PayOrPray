@@ -68,5 +68,8 @@ app.get("/trips/:tripId/expenses", verifyJWT, expensesController.listExpenses)
 app.post("/trips/:tripId/expenses", verifyJWT, expensesController.addExpense)
 app.delete("/trips/:tripId/expenses/:expenseId", verifyJWT, expensesController.deleteExpense)
 
+const owedController = require("./owedController.js")
+app.get("/trips/:tripId/owed", verifyJWT, owedController.getOwed);
+
 module.exports = app;
 
