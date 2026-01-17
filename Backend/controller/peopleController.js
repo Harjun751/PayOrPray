@@ -32,4 +32,23 @@ async function getPeople(req, res) {
 
 }
 
-module.exports = { getPeople };
+async function searchPerson(req, res) {
+    let data, error;
+
+    if (req.body.phone_no != null) {
+        ({ data, error } = await supabase.from('users')
+            .select('name, id, phone_no')
+            .ilike('phone_no', `%${req.body.phone_no}%`));
+    } else if (req.body.name != null) {
+        ({ data, error } = await supabase.from('users')
+            .select('name, id, phone_no')
+            .ilike('name', `%${req.body.name}%`));
+    } else {
+        return res.status(400).json({ code: '400', message: 'Provide name or phone_no' });
+    }
+
+    if (error) return res.status(500).send(error);
+    return res.status(200).json(data);
+}
+
+module.exports = { getPeople, searchPerson };

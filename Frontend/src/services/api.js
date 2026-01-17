@@ -1,7 +1,7 @@
 import axios from "axios";
 import { supabase } from "./supabase";
 
-const API_URL = "http://localhost:8081/";
+const API_URL = import.meta.env.VITE_BACKEND_API_URL
 
 
 const api = axios.create({
@@ -15,17 +15,17 @@ const api = axios.create({
 export const setAuthFromSupabase = async () => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
-    
+
     if (error) {
       console.error("Error getting Supabase session:", error);
       return null;
     }
-    
+
     if (session?.access_token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${session.access_token}`;
       return session.access_token;
     }
-    
+
     return null;
   } catch (err) {
     console.error("Error setting auth from Supabase:", err);
@@ -46,9 +46,9 @@ export const tripsApi = {
     const response = await api.get(`/trips/${tripId}/people`)
     return response.data
   },
-  
+
   create: async (name, description = '') => {
-    const response = await api.post('/trips', { 
+    const response = await api.post('/trips', {
       name: name,
       description: description // Optional field for additional details
     });
@@ -107,6 +107,37 @@ export const owedApi = {
   // Returns: { owed: number } - positive if owed to you, negative if you owe
   get: async (tripId) => {
     const response = await api.get(`/trips/${tripId}/owed`);
+    return response.data;
+  },
+};
+
+// InviteAPI
+export const inviteAPI = {
+  get: async() => {
+    const response = await api.get(`/invites`);
+    return response.data;
+  },
+  accept: async (tripId, inviteId) => {
+    const response = await api.post(`/trips/${tripId}/invites/${inviteId}/accept`);
+    return response.data;
+  },
+  decline: async (tripId, inviteId) => {
+    const response = await api.post(`/trips/${tripId}/invites/${inviteId}/decline`);
+    return response.data;
+  },
+  // Create invite(s) for a trip.
+  // Sends POST /trips/{tripId}/invites with body { UserID: [number] }
+  create: async (tripId, userId) => {
+    const body = { UserID: userId };
+    const response = await api.post(`/trips/${tripId}/invites`, body);
+    return response.data;
+  },
+}
+
+// People API - search people by name (sends { name } in POST body)
+export const peopleApi = {
+  search: async (name) => {
+    const response = await api.post('/people', { name });
     return response.data;
   },
 };

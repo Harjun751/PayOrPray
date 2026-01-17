@@ -1,6 +1,5 @@
 // Backend/controller/expenseSplitsController.js
 const supabase = require("../database.js");
-const getUserId = require("../utils/getAuth.js");
 
 function toCents(amount) {
   const n = Number(amount);
@@ -47,7 +46,7 @@ async function assertAllAreTripMembers(tripId, userIds) {
     .select("user_id")
     .eq("trip_id", tripId)
     .in("user_id", userIds);
-    
+
   if (error) return { ok: false, error };
 
   const memberSet = new Set((data || []).map((m) => Number(m.user_id)));
@@ -113,7 +112,7 @@ function buildEqualSplitRows(amountCents, participantIds) {
 
 async function getExpenseSplits(req, res) {
   try {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
     const tripId = req.params.tripid;
@@ -149,7 +148,7 @@ async function getExpenseSplits(req, res) {
 
 async function putExpenseSplits(req, res) {
   try {
-    const userId = getUserId(req);
+    const userId = req.user.id;
     if (!userId) return res.status(401).json({ code: "UNAUTHORIZED", message: "Missing credentials" });
 
     const tripId = req.params.tripid;

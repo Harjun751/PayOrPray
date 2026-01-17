@@ -5,7 +5,8 @@ import GroupsSection from "../components/dashboard/GroupsSection";
 import QuickActions from "../components/dashboard/QuickActions";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
 import GroupDetail from "./GroupDetail";
-import { tripsApi, setAuthFromSupabase, testAPI, expensesApi, owedApi } from "../services/api";
+import { tripsApi, setAuthFromSupabase, testAPI, expensesApi, owedApi, inviteAPI } from "../services/api";
+import InvitePanel from "../components/dashboard/InvitePanel";
 
 export default function Dashboard({ session, onSignOut }) {
   const [groups, setGroups] = useState([]);
@@ -16,7 +17,7 @@ export default function Dashboard({ session, onSignOut }) {
     const saved = localStorage.getItem('selectedGroupId');
     return saved ? { id: parseInt(saved), name: localStorage.getItem('selectedGroupName') } : null;
   });
-
+  const [invites, setInvites] = useState([]);
   const [showCreateTrip, setShowCreateTrip] = useState(false);
   const [createTripName, setCreateTripName] = useState('');
   const [createTripDescription, setCreateTripDescription] = useState('');
@@ -35,7 +36,7 @@ export default function Dashboard({ session, onSignOut }) {
     const fetchTrips = async () => {
       try {
         const userId = session?.user?.user_metadata?.sub || session?.user?.id;
-        
+
         if (!userId) {
           console.error("No user ID found in session");
           setError("Authentication error");
@@ -48,42 +49,46 @@ export default function Dashboard({ session, onSignOut }) {
         // Fetch trips from backend
         const trips = await tripsApi.list(1);
         console.log("Fetched trips:", trips);
-        
+
+        let invites = await inviteAPI.get();
+        setInvites(invites);
+
+
         // Fetch people count and owed amounts for each trip
         const tripsWithData = await Promise.all(
           trips.map(async (trip) => {
             let people = [];
             let owed = 0;
-            
+
             try {
               people = await tripsApi.peopleCount(trip.TripID);
             } catch (err) {
               console.error(`Error fetching people for trip ${trip.TripID}:`, err);
             }
-            
+
             try {
               const owedData = await owedApi.get(trip.TripID);
               owed = owedData.owed;
             } catch (err) {
               console.error(`Error fetching owed for trip ${trip.TripID}:`, err);
             }
-            
+
             return { ...trip, people, owed };
           })
         );
-        
+
         // Transform backend data to frontend format
         const transformedGroups = tripsWithData.map((trip, index) => {
           // Use fetched people data or fallback to trip.People
           const peopleList = trip.people && trip.people.length > 0 ? trip.people : (trip.People || []);
-          
+
           const memberInitials = peopleList.map(person => {
             const names = (person.name || person.Name).split(' ');
             return names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
           });
 
           const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500', 'bg-pink-500', 'bg-indigo-500'];
-          
+
           return {
             id: trip.TripID,
             name: trip.Description,
@@ -122,7 +127,7 @@ export default function Dashboard({ session, onSignOut }) {
     try {
       await setAuthFromSupabase();
       const newTrip = await tripsApi.create(createTripName, createTripDescription); // Pass description here
-    
+
       const colors = ['bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-green-500', 'bg-pink-500', 'bg-indigo-500'];
       const transformedTrip = {
         id: newTrip.TripID,
@@ -145,6 +150,51 @@ export default function Dashboard({ session, onSignOut }) {
     }
   };
   // ↑ END handleCreateTrip
+
+  // Helper to extract inviteId and tripId robustly
+  const getInviteIds = (inv) => {
+    const inviteId = inv?.id ?? inv?.invite_id ?? inv?.InviteID ?? inv?.InviteId;
+    const tripId = inv?.trip_id ?? inv?.TripID ?? inv?.tripId ?? inv?.TripId;
+    return { inviteId, tripId };
+  };
+
+  // Accept an invite: POST /trips/{tripId}/invites/{inviteId}/accept
+  const handleAcceptInvite = async (inv) => {
+    const { inviteId, tripId } = getInviteIds(inv);
+    if (!inviteId || !tripId) {
+      console.error("Missing invite or trip id for accept", inv);
+      return;
+    }
+    try {
+      await setAuthFromSupabase();
+      await inviteAPI.accept(tripId, inviteId);
+      setInvites((prev) => prev.filter((i) => {
+        const { inviteId: id } = getInviteIds(i);
+        return id !== inviteId;
+      }));
+    } catch (err) {
+      console.error("Failed to accept invite:", err);
+    }
+  };
+
+  // Decline an invite: POST /trips/{tripId}/invites/{inviteId}/decline
+  const handleDeclineInvite = async (inv) => {
+    const { inviteId, tripId } = getInviteIds(inv);
+    if (!inviteId || !tripId) {
+      console.error("Missing invite or trip id for decline", inv);
+      return;
+    }
+    try {
+      await setAuthFromSupabase();
+      await inviteAPI.decline(tripId, inviteId);
+      setInvites((prev) => prev.filter((i) => {
+        const { inviteId: id } = getInviteIds(i);
+        return id !== inviteId;
+      }));
+    } catch (err) {
+      console.error("Failed to decline invite:", err);
+    }
+  };
 
   // If a group is selected, show the detail view
   if (selectedGroup) {
@@ -185,6 +235,7 @@ export default function Dashboard({ session, onSignOut }) {
       />
 
       <main className="mx-auto w-full max-w-6xl px-6 py-8">
+        <InvitePanel invites={invites} onAccept={handleAcceptInvite} onDecline={handleDeclineInvite} />
         <BalanceCard summary={summary} />
 
         {error && (
@@ -206,7 +257,7 @@ export default function Dashboard({ session, onSignOut }) {
                 setSelectedGroup(group);
               }}
             />
-            
+
             {groups.length === 0 && !loading && !error && (
               <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
                 <p className="text-gray-600 mb-4">You haven't joined any groups yet.</p>
@@ -214,7 +265,7 @@ export default function Dashboard({ session, onSignOut }) {
                   onClick={() => alert("Create group")}
                   className="px-6 py-2.5 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
                 >
-                  Create Your First Group
+        <InvitePanel invites={invites} />
                 </button>
               </div>
             )}
@@ -242,7 +293,7 @@ export default function Dashboard({ session, onSignOut }) {
               </h2>
               <p className="text-gray-600 text-sm mt-1">Start a new adventure with your friends</p>
             </div>
-            
+
             {/* Error Message */}
             {createTripError && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-3">

@@ -127,8 +127,8 @@ async function acceptInvite(req, res) {
     // Add person to the trip
     {
         const { error } = await supabase
-            .from('group_members')
-            .insert({ "group_id": tripId, "user_id": userId })
+            .from('trip_members')
+            .insert({ "trip_id": tripId, "user_id": userId })
         if (error != null) {
             return res.send(error);
         }

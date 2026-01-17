@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { expensesApi, setAuthFromSupabase } from "../services/api";
+import { expensesApi, setAuthFromSupabase, peopleApi, inviteAPI } from "../services/api";
 import { supabase } from "../services/supabase";
 import ExpensesList from "../components/ExpensesList";
 import MembersList from "../components/MembersList";
@@ -30,6 +30,18 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [detailsEditLoading, setDetailsEditLoading] = useState(false);
   const [detailsEditError, setDetailsEditError] = useState('');
+
+  // Invite modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [inviteResults, setInviteResults] = useState([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  // sticky multi-selection for people search results
+  const [selectedPeople, setSelectedPeople] = useState([]); // array of { id, name }
+  const selectedIds = selectedPeople.map(p => p.id);
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSendError, setInviteSendError] = useState('');
 
   useEffect(() => {
     const fetchGroupData = async () => {
@@ -104,7 +116,7 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
     const totalAmount = parseInt(expenseFormData.amount_cents);
     const perPerson = Math.floor(totalAmount / selectedMembers.length);
     const remainder = totalAmount % selectedMembers.length;
-    
+
     return selectedMembers.map((memberId, index) => ({
       user_id: memberId,
       share_cents: perPerson + (index < remainder ? 1 : 0)
@@ -130,7 +142,7 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
 
     try {
       await setAuthFromSupabase();
-      
+
       // Create expense directly via Supabase to specify custom payer
       const { data: expenseData, error: expenseError } = await supabase
         .from('expense')
@@ -147,26 +159,26 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
         .single();
 
       if (expenseError) throw expenseError;
-      
+
       if (expenseData && expenseData.id) {
         // Create the splits
         const splits = calculateSplits();
-        const splitPromises = splits.map(split => 
+        const splitPromises = splits.map(split =>
           supabase.from('expense_splits').insert({
             expense_id: expenseData.id,
             user_id: split.user_id,
             share_cents: split.share_cents
           })
         );
-        
+
         await Promise.all(splitPromises);
-        
+
         // Add expense_splits to the new expense for display
         expenseData.expense_splits = splits;
-        
+
         setExpenses(prev => [expenseData, ...prev]);
       }
-      
+
       // Reset form
       setExpenseFormData({
         title: '',
@@ -212,12 +224,12 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
 
     try {
       await setAuthFromSupabase();
-      
+
       // Calculate splits
       const totalAmount = parseInt(editFormData.amount_cents);
       const perPerson = Math.floor(totalAmount / selectedMembers.length);
       const remainder = totalAmount % selectedMembers.length;
-      
+
       const splits = selectedMembers.map((memberId, index) => ({
         user_id: memberId,
         share_cents: perPerson + (index < remainder ? 1 : 0)
@@ -229,12 +241,12 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
       };
 
       const result = await expensesApi.update(groupId, selectedExpense.id, updateData);
-      
+
       // Update expenses list
-      setExpenses(prev => 
+      setExpenses(prev =>
         prev.map(exp => exp.id === selectedExpense.id ? result[0] : exp)
       );
-      
+
       // Close popup and return to expenses view
       handleCloseExpenseDetails();
     } catch (err) {
@@ -252,10 +264,10 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
     try {
       await setAuthFromSupabase();
       await expensesApi.delete(groupId, selectedExpense.id);
-      
+
       // Remove from expenses list
       setExpenses(prev => prev.filter(exp => exp.id !== selectedExpense.id));
-      
+
       // Close popup
       handleCloseExpenseDetails();
     } catch (err) {
@@ -263,6 +275,62 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
       console.error('Error deleting expense:', err);
     } finally {
       setDetailsEditLoading(false);
+    }
+  };
+
+  // Debounced search: calls GET /people with body { name: inviteQuery }
+  useEffect(() => {
+    if (!inviteQuery) {
+      setInviteResults([]);
+      setInviteError('');
+      return;
+    }
+
+    const t = setTimeout(async () => {
+      try {
+        setInviteLoading(true);
+        setInviteError('');
+        await setAuthFromSupabase();
+
+        // use axios helper
+        const data = await peopleApi.search(inviteQuery);
+        setInviteResults(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('People search failed', err);
+        setInviteError(err.message || 'Search failed');
+      } finally {
+        setInviteLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(t);
+  }, [inviteQuery]);
+
+  const sendInvite = async () => {
+    if (selectedPeople.length === 0) {
+      setInviteSendError('Select at least one person to invite');
+      return;
+    }
+
+    try {
+      setInviteSending(true);
+      setInviteSendError('');
+      await setAuthFromSupabase();
+
+      // Send one POST per selected user: POST /trips/{tripId}/invites with { UserID: [number] }
+      const promises = selectedIds.map(id => inviteAPI.create(groupId, id));
+      await Promise.all(promises);
+
+      // close modal and reset
+      setShowInviteModal(false);
+      setSelectedPeople([]);
+      setInviteQuery('');
+      setInviteResults([]);
+    } catch (err) {
+      console.error('Send invite failed', err);
+      setInviteSendError(err.response?.data?.error || err.message || 'Failed to send invite');
+    } finally {
+      setInviteSending(false);
     }
   };
 
@@ -325,10 +393,98 @@ export default function GroupDetail({ groupId, groupName, onBack }) {
           <div className="lg:col-span-1">
             <MembersList
               members={members}
-              onInvite={() => alert('Invite member - coming soon')}
+              onInvite={() => setShowInviteModal(true)}
             />
           </div>
         </div>
+
+        {/* Invite Modal */}
+        {showInviteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowInviteModal(false)} />
+            <div className="relative z-10 w-full max-w-md bg-white rounded-lg shadow-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold">Invite member</h3>
+                <button className="text-gray-500" onClick={() => setShowInviteModal(false)}>✕</button>
+              </div>
+
+              <div className="mb-3">
+                <label className="block text-sm text-gray-600 mb-1">Search people</label>
+                {/* Selected people tags (sticky) */}
+                {selectedPeople.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {selectedPeople.map(p => (
+                      <span key={p.id} className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-gray-100 text-sm">
+                        <span>{p.name}</span>
+                        <button
+                          onClick={() => setSelectedPeople(prev => prev.filter(x => x.id !== p.id))}
+                          className="text-xs text-gray-500 px-1"
+                          aria-label={`Remove ${p.name}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  value={inviteQuery}
+                  onChange={(e) => { setInviteQuery(e.target.value); setInviteSendError(''); }}
+                  className="w-full border border-gray-200 rounded-md px-3 py-2"
+                  placeholder="Type a name..."
+                />
+              </div>
+
+              <div className="mb-3 max-h-48 overflow-auto border border-gray-100 rounded-md">
+                {inviteLoading && <div className="p-3 text-sm text-gray-500">Searching...</div>}
+                {inviteError && <div className="p-3 text-sm text-red-500">{inviteError}</div>}
+                {!inviteLoading && inviteResults.length === 0 && inviteQuery && (
+                  <div className="p-3 text-sm text-gray-500">No results</div>
+                )}
+                <ul>
+                  {inviteResults.map(p => {
+                    const isSelected = selectedIds.includes(p.id);
+                    return (
+                      <li
+                        key={p.id}
+                        onClick={() => {
+                          setSelectedPeople(prev => {
+                            if (prev.find(x => x.id === p.id)) {
+                              return prev.filter(x => x.id !== p.id);
+                            }
+                            return [...prev, p];
+                          });
+                        }}
+                        className={`px-3 py-2 cursor-pointer hover:bg-gray-50 ${isSelected ? 'bg-gray-100' : ''}`}
+                      >
+                        <div className="text-sm font-medium">{p.name}</div>
+                        <div className="text-xs text-gray-500">id: {p.id}</div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {inviteSendError && <div className="mb-2 text-sm text-red-500">{inviteSendError}</div>}
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => { setShowInviteModal(false); }}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={sendInvite}
+                  disabled={inviteSending || selectedPeople.length === 0}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-md disabled:opacity-60"
+                >
+                  {inviteSending ? 'Sending...' : 'Send Invite'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Expense Details Modal */}
         <ExpenseDetailsModal
