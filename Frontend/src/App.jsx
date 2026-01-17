@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import { supabase } from "./services/supabase";
+import Login from "./pages/Login";
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+
+  if (!session) return <Login />;
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
+    <div className="min-h-screen p-6">
+      <div className="max-w-xl mx-auto rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-xl font-semibold">You’re in ✅</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Signed in as <span className="font-medium">{session.user.email}</span>
         </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
 
-export default App
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="mt-6 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition"
+        >
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
+}
