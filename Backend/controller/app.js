@@ -33,11 +33,11 @@ app.get('/generateQR',function(req, res){
 });
 
 // TRIP
-
 const tripsController = require("./tripsController");
 app.get("/trips", tripsController.listTrips);
 app.post("/trips", tripsController.createTrip);
 
+// INVITES
 const inviteController = require("./inviteController");
 app.get("/trips/:tripId/invites", inviteController.getInvites);
 
@@ -46,10 +46,17 @@ app.post("/trips/:tripid/invites", inviteController.addInvite);
 app.post("/trips/:tripid/invites/:inviteid/accept", inviteController.acceptInvite);
 app.post("/trips/:tripid/invites/:inviteid/decline", inviteController.declineInvite);
 
+// EXPENSES
 const expensesController = require("./expensesController.js")
-app.get("/trips/:tripId/expenses", expensesController.listExpenses)
-app.post("/trips/:tripId/expenses", expensesController.addExpense)
-app.delete("/trips/:tripId/expenses/:expenseId", expensesController.deleteExpense)
+app.get("/trips/:tripId/expense", expensesController.listExpenses)
+app.post("/trips/:tripId/expense", expensesController.addExpense)
+app.delete("/trips/:tripId/expense/:expenseId", expensesController.deleteExpense)
+
+// EXPENSESPLITS
+const expenseSplitsController = require("./expensesSplitsController");
+app.get("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.getExpenseSplits);
+app.put("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.putExpenseSplits);
+
 
 module.exports = app;
 
