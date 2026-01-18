@@ -53,20 +53,23 @@ async function deleteExpense(req, res){
 
 async function updateExpense(req, res) {
     try {
-        const expenseId = req.params.expenseId;
+        console.log(req.body)
+        console.log(req.params)
+        const expenseId = req.params.expensesId;
         const title = req.body.title;
         const currency = req.body.currency;
         const amount_cents = req.body.amount_cents;
         const notes = req.body.notes;
         const category = req.body.category;
         const payer_id = req.body.payer_id;
+        const splits = req.body.splits
 
         // Validate required fields
         if (!title || !currency || amount_cents === undefined) {
             return res.status(400).json({ error: "Missing required fields: title, currency, amount_cents" });
         }
 
-        const updatedExpense = await expensesModel.updateExpense(expenseId, title, currency, amount_cents, notes, category, payer_id);
+        const updatedExpense = await expensesModel.updateExpense(expenseId, title, currency, amount_cents, notes, category, payer_id, splits);
         return res.status(200).json(updatedExpense);
     } catch (err) {
         return res.status(500).json({ error: err.message ?? String(err) });

@@ -68,11 +68,35 @@ async function deleteExpense(expenseId){
     .eq('id',expenseId)
 }
 
-async function updateExpense(expenseId,title,currency,amount_cents,notes,category,payer_id){
+async function updateExpense(expenseId,title,currency,amount_cents,notes,category,payer_id, splits){
     const {data, error} = await supabase
     .from('expense')
     .update({title:title, currency:currency, amount_cents:amount_cents, notes:notes, category:category, payer_id:payer_id})
     .eq('id', expenseId)
+
+    const {error: delError} = await supabase
+    .from('expense_splits')
+    .delete()
+    .eq('expense_id', expenseId)
+
+    if (delError) throw delError
+
+    // 3. Insert new splits if provided
+    if (Array.isArray(splits) && splits.length > 0) {
+        const splitsPayload = splits.map(split => ({
+            expense_id: expenseId,
+            user_id: split.user_id,
+            share_cents: split.share_cents
+        }));
+
+        const { error: splitsError } = await supabase
+            .from('expense_splits')
+            .insert(splitsPayload);
+
+        if (splitsError) throw splitsError;
+    }
+
+    return data;
 }
 
 module.exports = {getAllExpenses, addExpense, deleteExpense, updateExpense};
