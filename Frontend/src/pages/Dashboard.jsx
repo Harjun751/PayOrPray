@@ -175,7 +175,7 @@ function useDashboard(session) {
         fetchTrips();
         (async () => {
           try {
-            const fetchedInvites = await inviteAPI.list();
+            const fetchedInvites = await inviteAPI.get();
             setInvites(fetchedInvites);
           } catch (err) {
             console.error("Error fetching invites:", err);
