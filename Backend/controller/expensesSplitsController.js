@@ -163,33 +163,53 @@ async function putExpenseSplits(req, res) {
     if (exp.notFound) return res.status(404).json({ code: "NOT_FOUND", message: "Expense not found" });
     if (exp.wrongTrip) return res.status(404).json({ code: "NOT_FOUND", message: "Expense not in this trip" });
 
-    const amountCents = Number(exp.expense.amount_cents);
-    if (!Number.isFinite(amountCents) || amountCents < 0) {
-      return res.status(500).json({ code: "INTERNAL_ERROR", message: "Expense amount_cents invalid" });
+    const expense_splits = req.body.expense_splits;
+    if (!Array.isArray(expense_splits) || expense_splits.length === 0) {
+      return res.status(400).json({ code: "BAD_REQUEST", message: "Body must include expense_splits: [{ user_id, share_cents }]" });
     }
 
-    const participants = req.body?.Participants;
-    if (!Array.isArray(participants) || participants.length === 0) {
-      return res.status(400).json({
-        code: "BAD_REQUEST",
-        message: "Provide Participants (non-empty array) for equal split.",
+    // Validate all are trip members
+    const userIds = expense_splits.map((s) => s.user_id);
+    const memberCheck = await assertAllAreTripMembers(tripId, userIds);
+    if (memberCheck.error) return res.status(500).json({ code: "INTERNAL_ERROR", details: memberCheck.error });
+    if (!memberCheck.ok) return res.status(400).json({ code: "BAD_REQUEST", message: memberCheck.message });
+
+    // Convert + validate splits into DB rows
+    const rows = [];
+    let total = 0;
+
+    for (const s of expense_splits) {
+      const uid = Number(s.user_id);
+      const share = Number(s.share_cents);
+
+      if (!Number.isInteger(uid) || uid <= 0) {
+        return res.status(400).json({ code: "BAD_REQUEST", message: "Each split must include a valid user_id" });
+      }
+      if (!Number.isInteger(share) || share < 0) {
+        return res.status(400).json({ code: "BAD_REQUEST", message: "Each split must include a valid non-negative share_cents" });
+      }
+
+      rows.push({
+        expense_id: Number(expenseId),
+        user_id: uid,
+        share_cents: share,
       });
+      total += share;
     }
 
-    const memCheck = await assertAllAreTripMembers(tripId, participants);
-    if (memCheck.error) return res.status(500).json({ code: "INTERNAL_ERROR", details: memCheck.error });
-    if (!memCheck.ok) return res.status(400).json({ code: "BAD_REQUEST", message: memCheck.message });
+    // Replace all splits for this expense in a transaction-like manner
+    const { error: delErr } = await supabase
+      .from("expense_splits")
+      .delete()
+      .eq("expense_id", expenseId);
 
-    const splitRows = buildEqualSplitRows(amountCents, participants).map((r) => ({
-      expense_id: Number(expenseId),
-      user_id: r.user_id,
-      share_cents: r.share_cents,
-    }));
-
-    const { error: delErr } = await supabase.from("expense_splits").delete().eq("expense_id", expenseId);
     if (delErr) return res.status(500).json({ code: "INTERNAL_ERROR", details: delErr });
 
-    const { data: inserted, error: insErr } = await supabase.from("expense_splits").insert(splitRows).select();
+    const { data: inserted, error: insErr } = await supabase
+      .from("expense_splits")
+      .insert(rows)
+      .select();
+
     if (insErr) return res.status(500).json({ code: "INTERNAL_ERROR", details: insErr });
 
     return res.status(200).json({

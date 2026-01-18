@@ -97,6 +97,12 @@ export const expensesApi = {
     return response.data;
   },
 
+  // Update only the splits for an expense: PUT /trips/{tripId}/expenses/{expenseId}/splits
+  updateSplits: async (tripId, expenseId, updatedExpense) => {
+    const response = await api.put(`/trips/${tripId}/expenses/${expenseId}/splits`, updatedExpense);
+    return response.data;
+  },
+
   // Delete an expense
   delete: async (tripId, expenseId) => {
     const response = await api.delete(`/trips/${tripId}/expenses/${expenseId}`);

@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
+    "@theblindhawk/roulette": "^3.1.1",
     "axios": "^1.13.2",
+    "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
+    "react-custom-roulette": "^1.4.1",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {

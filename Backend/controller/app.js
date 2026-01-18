@@ -82,8 +82,8 @@ app.get("/trips/:tripId/owed", verifyJWT, owedController.getOwed);
 
 // EXPENSESPLITS
 const expenseSplitsController = require("./expensesSplitsController");
-app.get("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.getExpenseSplits);
-app.put("/trips/:tripid/expenses/:expenseid/splits", expenseSplitsController.putExpenseSplits);
+app.get("/trips/:tripid/expenses/:expenseid/splits", verifyJWT, expenseSplitsController.getExpenseSplits);
+app.put("/trips/:tripid/expenses/:expenseid/splits", verifyJWT, expenseSplitsController.putExpenseSplits);
 
 
 module.exports = app;
