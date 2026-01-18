@@ -23,7 +23,7 @@ export default function ExpensesList({
     const totalAmount = parseInt(formData.amount_cents);
     const perPerson = Math.floor(totalAmount / selectedMembers.length);
     const remainder = totalAmount % selectedMembers.length;
-    
+
     return selectedMembers.map((memberId, index) => ({
       user_id: memberId,
       share_cents: perPerson + (index < remainder ? 1 : 0)
@@ -34,7 +34,7 @@ export default function ExpensesList({
     <div className="bg-white rounded-2xl border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">Expenses</h2>
-        <button 
+        <button
           onClick={onToggleAddForm}
           className="px-4 py-2 bg-gradient-to-r from-primary-500 to-accent-500 text-white rounded-lg text-sm font-medium hover:shadow-lg transition-all"
         >
@@ -50,7 +50,7 @@ export default function ExpensesList({
               {error}
             </div>
           )}
-          
+
           <div className="mb-5">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Title *
@@ -185,7 +185,7 @@ export default function ExpensesList({
             <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 space-y-3 max-h-48 overflow-y-auto">
               {members.length > 0 ? (
                 members.map(member => (
-                  <label 
+                  <label
                     key={member.PersonID}
                     className="flex items-center cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors"
                   >
@@ -243,9 +243,9 @@ export default function ExpensesList({
       ) : (
         <div className="space-y-3">
           {expenses.map((expense) => (
-            <ExpenseItem 
-              key={expense.id} 
-              expense={expense} 
+            <ExpenseItem
+              key={expense.id}
+              expense={expense}
               members={members}
               onOpenDetails={onExpenseClick}
             />

@@ -91,6 +91,15 @@ export default function SpinTheWheel({
           if (expense?.trip_id && expense?.id) {
             await expensesApi.updateSplits(expense.trip_id, expense.id, updatedExpense);
             alert("Expense splits updated");
+
+                       // notify the app that this expense was updated so other components can refresh their views
+           try {
+             window.dispatchEvent(new CustomEvent('expenseUpdated', { detail: updatedExpense }));
+           } catch (e) {
+             // ignore if environment doesn't support CustomEvent
+             console.warn("failed to dispatch expenseUpdated", e);
+           }
+
           } else {
             console.warn("Missing tripId or expenseId, cannot update splits");
           }
