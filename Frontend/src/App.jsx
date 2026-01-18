@@ -77,6 +77,19 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((reg) => {
+          console.log("Service worker registered:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("Service worker registration failed:", err);
+        });
+    }
+  }, []);
+
   if (loading) return null;
 
   if (!session) {
