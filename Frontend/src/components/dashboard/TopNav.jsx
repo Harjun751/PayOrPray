@@ -23,17 +23,6 @@ export default function TopNav({ userEmail, onAdd, onSignOut }) {
             ) : null}
 
             <button
-              onClick={onAdd}
-              className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm hover:shadow-md transition"
-              aria-label="Add"
-              title="Add"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-
-            <button
               onClick={onSignOut}
               className="hidden sm:inline-flex rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold hover:bg-gray-50 transition"
             >

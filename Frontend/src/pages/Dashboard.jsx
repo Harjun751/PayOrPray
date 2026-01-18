@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import TopNav from "../components/dashboard/TopNav";
 import BalanceCard from "../components/dashboard/BalanceCard";
 import GroupsSection from "../components/dashboard/GroupsSection";
-import QuickActions from "../components/dashboard/QuickActions";
-import ActivityFeed from "../components/dashboard/ActivityFeed";
 import GroupDetail from "./GroupDetail";
 import { tripsApi, setAuthFromSupabase, testAPI, expensesApi, owedApi, inviteAPI } from "../services/api";
 import InvitePanel from "../components/dashboard/InvitePanel";
@@ -289,9 +287,9 @@ export default function Dashboard({ session, onSignOut }) {
         )}
 
         {/* Splitwise-like layout */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          {/* Left: main content */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="mt-8 flex flex-col items-center gap-6">
+          {/* Main content - centered */}
+          <div className="w-full max-w-4xl space-y-6">
             <GroupsSection
               groups={groups}
               onNewGroup={() => setShowCreateTrip(true)}
@@ -315,15 +313,10 @@ export default function Dashboard({ session, onSignOut }) {
             )}
           </div>
 
-          {/* Right: sidebar */}
-          <aside className="space-y-6 lg:sticky lg:top-24 h-fit">
-            <QuickActions
-              onAddExpense={() => alert("Select a group first")}
-              onSettleUp={() => alert("Settle up")}
-              onPayOrPray={() => alert("Pay or Pray round")}
-            />
-            <ActivityFeed items={activity} />
-          </aside>
+          {/* Invites panel - centered below groups */}
+          <div className="w-full max-w-4xl">
+            <InvitePanel invites={invites} />
+          </div>
         </div>
       </main>
 
